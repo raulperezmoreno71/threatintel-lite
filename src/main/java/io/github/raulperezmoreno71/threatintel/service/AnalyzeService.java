@@ -1,0 +1,67 @@
+package io.github.raulperezmoreno71.threatintel.service;
+
+import io.github.raulperezmoreno71.threatintel.dto.AnalyzeRequest;
+import io.github.raulperezmoreno71.threatintel.dto.AnalyzeResponse;
+import org.springframework.stereotype.Service;
+
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.List;
+import java.net.http.HttpClient;
+
+@Service
+public class AnalyzeService {
+
+    public AnalyzeResponse analyze (AnalyzeRequest request) {
+        String url = request.getUrl();
+        String domain = extractDomain(url);
+        List<String> ips = resolveIp(domain);
+        int httpStatusCode = getStatusCode(url);
+
+        return new AnalyzeResponse(
+                "URL analyzed successfully",
+                url,
+                domain,
+                ips,
+                httpStatusCode
+        );
+    }
+
+    private String extractDomain (String url) {
+        return URI.create(url).getHost();
+    }
+
+    private List<String> resolveIp (String domain) {
+        List<String> ips = new ArrayList<>();
+
+        try {
+            InetAddress[] addresses = InetAddress.getAllByName(domain);
+
+            for (InetAddress address : addresses) {
+                ips.add(address.getHostAddress());
+            }
+
+        } catch (Exception e) {
+            ips.add("Could not resolve IP");
+        }
+
+        return ips;
+    }
+
+    private int getStatusCode(String url) {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+
+            HttpRequest request = HttpRequest.newBuilder(new URI(url)).build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            return response.statusCode();
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+}
