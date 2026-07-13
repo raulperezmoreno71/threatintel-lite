@@ -2,5 +2,5 @@ POST http://localhost:8080/api/analyze
 Content-Type: application/json
 
 {
-  "url": "https://google.com/search?q=test"
+  "url": "https://www.google.com/"
 }

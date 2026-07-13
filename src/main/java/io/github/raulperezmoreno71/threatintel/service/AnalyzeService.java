@@ -17,6 +17,9 @@ public class AnalyzeService {
 
     public AnalyzeResponse analyze (AnalyzeRequest request) {
         String url = request.getUrl();
+
+        validateUrl(url);
+
         String domain = extractDomain(url);
         List<String> ips = resolveIp(domain);
         int httpStatusCode = getStatusCode(url);
@@ -28,6 +31,22 @@ public class AnalyzeService {
                 ips,
                 httpStatusCode
         );
+    }
+
+    private void validateUrl(String url) {
+        if (url == null || url.isBlank()) {
+            throw new IllegalArgumentException("URL cannot be null or blank");
+        }
+
+        URI uri = URI.create(url);
+
+        if (uri.getHost() == null) {
+            throw new IllegalArgumentException("URL must contain a valid host");
+        }
+
+        if (uri.getScheme() == null || (!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme()))) {
+            throw new IllegalArgumentException("URL protocol must be HTTP or HTTPS");
+        }
     }
 
     private String extractDomain (String url) {
