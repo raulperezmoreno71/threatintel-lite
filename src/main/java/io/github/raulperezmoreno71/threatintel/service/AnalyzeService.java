@@ -11,6 +11,7 @@ import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.net.http.HttpClient;
+import java.util.Optional;
 
 @Service
 public class AnalyzeService {
@@ -22,14 +23,22 @@ public class AnalyzeService {
 
         String domain = extractDomain(url);
         List<String> ips = resolveIp(domain);
-        int httpStatusCode = getStatusCode(url);
+        HttpResponse<String> response = getHttpResponse(url);
+        Optional<String> location = response.headers().firstValue("Location");
+        int httpStatusCode = response.statusCode();
+        String redirectLocation = null;
+
+        if (location.isPresent()) {
+            redirectLocation = location.get();
+        }
 
         return new AnalyzeResponse(
                 "URL analyzed successfully",
                 url,
                 domain,
                 ips,
-                httpStatusCode
+                httpStatusCode,
+                redirectLocation
         );
     }
 
@@ -70,17 +79,22 @@ public class AnalyzeService {
         return ips;
     }
 
-    private int getStatusCode(String url) {
+    private HttpResponse<String> getHttpResponse (String url) {
         try {
             HttpClient client = HttpClient.newHttpClient();
 
-            HttpRequest request = HttpRequest.newBuilder(new URI(url)).build();
+            HttpRequest request = HttpRequest
+                    .newBuilder(new URI(url))
+                    .build();
 
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = client.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString()
+            );
 
-            return response.statusCode();
+            return response;
         } catch (Exception e) {
-            return -1;
+            throw new RuntimeException("Could not send HTTP request", e);
         }
     }
 }
