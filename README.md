@@ -15,6 +15,9 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
  - [x] Resolve all available IP addresses through DNS.
  - [x] Retrieve the HTTP status code.
  - [x] Detect HTTP redirections and their destination.
+ - [x] Detect the response Content-Type.
+ - [x] Identify the responding web server.
+ - [x] Retrieve the declared Content-Length header.
  - [x] Return structured JSON responses.
  - [x] Handle invalid request through global exception handling.
  - [x] Follow a clean layered architecture (Controller, Service, DTO and Exception Handler).
@@ -27,7 +30,7 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
  - **HTTP Client:** Java HttpClient
  - **JSON Serialization:** Jackson
  - **Version Control:** Git
- - **Repository Hosting:** Github
+ - **Repository Hosting:** GitHub
 
 ## Project Structure
 
@@ -86,7 +89,10 @@ Content-Type: application/json
         "216.58.205.46"
     ],
     "httpStatusCode": 301,
-    "redirectLocation": "https://www.google.com"
+    "redirectLocation": "https://www.google.com",
+    "contentType": "text/html; charset=UTF-8",
+    "server": "gws",
+    "contentLength": 220
 }
 ```
 
@@ -156,16 +162,13 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] DNS resolution
  - [x] HTTP status code analysis
  - [x] HTTP redirection detection
+ - [x] HTTP response header analysis
  - [x] Global exception handling
  - [x] Structures JSON responses
 
-### In Progress
-
- - [ ] HTTP response header analysis
-
 ### Planned
- - [ ] Content-Type detection
- - [ ] Server header detection
+
+ - [ ] HTTP response time measurement
  - [ ] SSL/TLS certificate analysis
  - [ ] Redirect chain analysis
  - [ ] Security headers analysis

@@ -11,7 +11,6 @@ import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.net.http.HttpClient;
-import java.util.Optional;
 
 @Service
 public class AnalyzeService {
@@ -24,13 +23,12 @@ public class AnalyzeService {
         String domain = extractDomain(url);
         List<String> ips = resolveIp(domain);
         HttpResponse<String> response = getHttpResponse(url);
-        Optional<String> location = response.headers().firstValue("Location");
-        int httpStatusCode = response.statusCode();
-        String redirectLocation = null;
 
-        if (location.isPresent()) {
-            redirectLocation = location.get();
-        }
+        int httpStatusCode = response.statusCode();
+        String redirectLocation = response.headers().firstValue("Location").orElse(null);
+        String contentType = response.headers().firstValue("Content-Type").orElse(null);
+        String server = response.headers().firstValue("Server").orElse(null);
+        Long contentLength = response.headers().firstValue("Content-Length").map(Long::parseLong).orElse(null);
 
         return new AnalyzeResponse(
                 "URL analyzed successfully",
@@ -38,7 +36,10 @@ public class AnalyzeService {
                 domain,
                 ips,
                 httpStatusCode,
-                redirectLocation
+                redirectLocation,
+                contentType,
+                server,
+                contentLength
         );
     }
 
