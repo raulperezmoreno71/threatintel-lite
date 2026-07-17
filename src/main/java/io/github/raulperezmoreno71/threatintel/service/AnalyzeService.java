@@ -22,27 +22,20 @@ public class AnalyzeService {
 
         String domain = extractDomain(url);
         List<String> ips = resolveIp(domain);
-        HttpRequestResult result = getHttpResponse(url);
-        HttpResponse<String> response = result.getHttpResponse();
-        long responseTimeMs = result.getResponseTimeMs();
-
-        int httpStatusCode = response.statusCode();
-        String redirectLocation = response.headers().firstValue("Location").orElse(null);
-        String contentType = response.headers().firstValue("Content-Type").orElse(null);
-        String server = response.headers().firstValue("Server").orElse(null);
-        Long contentLength = response.headers().firstValue("Content-Length").map(Long::parseLong).orElse(null);
+        HttpRequestResult requestResult = getHttpResponse(url);
+        HttpAnalysisResult analysisResult = analyzeHttpResponse(requestResult);
 
         return new AnalyzeResponse(
                 "URL analyzed successfully",
                 url,
                 domain,
                 ips,
-                httpStatusCode,
-                redirectLocation,
-                contentType,
-                server,
-                contentLength,
-                responseTimeMs
+                analysisResult.getHttpStatusCode(),
+                analysisResult.getRedirectLocation(),
+                analysisResult.getContentType(),
+                analysisResult.getServer(),
+                analysisResult.getContentLength(),
+                analysisResult.getResponseTimeMs()
         );
     }
 
@@ -107,5 +100,26 @@ public class AnalyzeService {
         } catch (Exception e) {
             throw new RuntimeException("Could not send HTTP request", e);
         }
+    }
+
+    private HttpAnalysisResult analyzeHttpResponse (HttpRequestResult requestResult) {
+        HttpResponse<String> response = requestResult.getHttpResponse();
+
+        long responseTimeMs = requestResult.getResponseTimeMs();
+
+        int httpStatusCode = response.statusCode();
+        String redirectLocation = response.headers().firstValue("Location").orElse(null);
+        String contentType = response.headers().firstValue("Content-Type").orElse(null);
+        String server = response.headers().firstValue("Server").orElse(null);
+        Long contentLength = response.headers().firstValue("Content-Length").map(Long::parseLong).orElse(null);
+
+        return new HttpAnalysisResult(
+                httpStatusCode,
+                redirectLocation,
+                contentType,
+                server,
+                contentLength,
+                responseTimeMs
+        );
     }
 }
