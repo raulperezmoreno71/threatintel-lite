@@ -18,6 +18,7 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
  - [x] Detect the response Content-Type.
  - [x] Identify the responding web server.
  - [x] Retrieve the declared Content-Length header.
+ - [x] Measure the HTTP response time.
  - [x] Return structured JSON responses.
  - [x] Handle invalid request through global exception handling.
  - [x] Follow a clean layered architecture (Controller, Service, DTO and Exception Handler).
@@ -92,7 +93,8 @@ Content-Type: application/json
     "redirectLocation": "https://www.google.com",
     "contentType": "text/html; charset=UTF-8",
     "server": "gws",
-    "contentLength": 220
+    "contentLength": 220,
+    "responseTimeMs": 106
 }
 ```
 
@@ -163,12 +165,12 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] HTTP status code analysis
  - [x] HTTP redirection detection
  - [x] HTTP response header analysis
+ - [x] HTTP response time measurement
  - [x] Global exception handling
  - [x] Structures JSON responses
 
 ### Planned
 
- - [ ] HTTP response time measurement
  - [ ] SSL/TLS certificate analysis
  - [ ] Redirect chain analysis
  - [ ] Security headers analysis

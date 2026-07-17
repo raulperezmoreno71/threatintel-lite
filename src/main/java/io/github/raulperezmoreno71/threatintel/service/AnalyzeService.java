@@ -22,7 +22,9 @@ public class AnalyzeService {
 
         String domain = extractDomain(url);
         List<String> ips = resolveIp(domain);
-        HttpResponse<String> response = getHttpResponse(url);
+        HttpRequestResult result = getHttpResponse(url);
+        HttpResponse<String> response = result.getHttpResponse();
+        long responseTimeMs = result.getResponseTimeMs();
 
         int httpStatusCode = response.statusCode();
         String redirectLocation = response.headers().firstValue("Location").orElse(null);
@@ -39,7 +41,8 @@ public class AnalyzeService {
                 redirectLocation,
                 contentType,
                 server,
-                contentLength
+                contentLength,
+                responseTimeMs
         );
     }
 
@@ -80,7 +83,7 @@ public class AnalyzeService {
         return ips;
     }
 
-    private HttpResponse<String> getHttpResponse (String url) {
+    private HttpRequestResult getHttpResponse (String url) {
         try {
             HttpClient client = HttpClient.newHttpClient();
 
@@ -88,12 +91,19 @@ public class AnalyzeService {
                     .newBuilder(new URI(url))
                     .build();
 
+            long startTime = System.nanoTime();
+
             HttpResponse<String> response = client.send(
                     request,
                     HttpResponse.BodyHandlers.ofString()
             );
 
-            return response;
+            long endTime = System.nanoTime();
+
+            long responseTime = (endTime - startTime) / 1_000_000;
+
+            return new HttpRequestResult(response, responseTime);
+
         } catch (Exception e) {
             throw new RuntimeException("Could not send HTTP request", e);
         }

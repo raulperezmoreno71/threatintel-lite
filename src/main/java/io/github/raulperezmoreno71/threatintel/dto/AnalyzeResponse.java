@@ -12,6 +12,7 @@ public class AnalyzeResponse {
     private String contentType;
     private String server;
     private Long contentLength;
+    private long responseTime;
 
     public AnalyzeResponse () {
 
@@ -26,7 +27,8 @@ public class AnalyzeResponse {
             String redirectLocation,
             String contentType,
             String server,
-            Long contentLength
+            Long contentLength,
+            long responseTime
     ) {
         this.message = message;
         this.url = url;
@@ -37,6 +39,7 @@ public class AnalyzeResponse {
         this.contentType = contentType;
         this.server = server;
         this.contentLength = contentLength;
+        this.responseTime = responseTime;
     }
 
     public String getMessage () {return this.message;}
@@ -74,4 +77,8 @@ public class AnalyzeResponse {
     public Long getContentLength () {return this.contentLength;}
 
     public void setContentLength (Long contentLength) {this.contentLength = contentLength;}
+
+    public long getResponseTimeMs () {return this.responseTime;}
+
+    public void setResponseTimeMs (long responseTime) {this.responseTime = responseTime;}
 }
