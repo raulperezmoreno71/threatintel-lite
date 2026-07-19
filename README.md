@@ -2,7 +2,7 @@
 
 ## Overview
 
-ThreatIntel Lite is a Rest API built with Spring Boot that analyzes different aspects of a URL, including domain  resolution, HTTP responses and redirection behavior.
+ThreatIntel Lite is a REST API built with Spring Boot that analyzes different aspects of a URL, including DNS resolution, HTTP behavior and SSL/TLS certificate information.
 
 The project is designed to explore how backend applications interact with Internet protocols such as DNS and HTTP while following clean architecture principles and modern Java development practices.
 
@@ -20,7 +20,11 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
  - [x] Retrieve the declared Content-Length header.
  - [x] Measure the HTTP response time.
  - [x] Return structured JSON responses.
- - [x] Handle invalid request through global exception handling.
+ - [x] Handle invalid requests through global exception handling.
+ - [x] Analyze SSL/TLS certificates.
+ - [x] Retrieve certificate issuer and subject.
+ - [x] Retrieve certificate validity dates.
+ - [x] Calculate remaining days until certificate expiration.
  - [x] Follow a clean layered architecture (Controller, Service, DTO and Exception Handler).
 
 ## Tech Stack
@@ -28,7 +32,7 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
  - **Language:** Java 21
  - **Framework:** Spring Boot
  - **Build Tool:** Maven
- - **HTTP Client:** Java HttpClient
+ - **Networking:** Java HttpClient, JSSE (SSL/TLS)
  - **JSON Serialization:** Jackson
  - **Version Control:** Git
  - **Repository Hosting:** GitHub
@@ -38,11 +42,12 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
 ```text
 src
 └── main
-    └──java
-        └──io.github.raulperezmoreno71.threatintel
+    └── java
+        └── io.github.raulperezmoreno71.threatintel
             ├── controller
             ├── dto
             ├── exception
+            ├── model
             └── service
 ```
 
@@ -57,6 +62,10 @@ Contains the application's business logic, including URL validation, DNS resolut
 ### `dto`
 
 Defines the request and response objects exchanged between the API and its clients.
+
+### `model`
+
+Contains internal domain models used by the service layer during the analysis process.
 
 ### `exception`
 
@@ -94,7 +103,14 @@ Content-Type: application/json
     "contentType": "text/html; charset=UTF-8",
     "server": "gws",
     "contentLength": 220,
-    "responseTimeMs": 106
+    "responseTimeMs": 106,
+    "ssl": {
+        "issuer": "CN=WR2,O=Google Trust Services,C=US",
+        "subject": "CN=*.google.com",
+        "validFrom": "2026-06-29",
+        "validUntil": "2026-09-21",
+        "daysUntilExpiration": 64
+    }
 }
 ```
 
@@ -160,30 +176,31 @@ The project is being developed incrementally, with each milestone focused on lea
 
 ### Completed
  - [x] URL validation
- - [x] Domain extraction
  - [x] DNS resolution
  - [x] HTTP status code analysis
  - [x] HTTP redirection detection
  - [x] HTTP response header analysis
  - [x] HTTP response time measurement
  - [x] Global exception handling
- - [x] Structures JSON responses
+ - [x] SSL/TLS certificate analysis
+ - [x] Structured JSON responses
 
 ### Planned
 
- - [ ] SSL/TLS certificate analysis
  - [ ] Redirect chain analysis
  - [ ] Security headers analysis
  - [ ] REST API documentation (OpenAPI / Swagger)
  - [ ] Unit and integration tests
  - [ ] Docker support
+ - [ ] Authentication and user accounts
+ - [ ] Persistent analysis history 
  - [ ] Domain reputation analysis using external services.
 
 ## Author
 
 **Raúl Pérez Moreno**
 
-Computer Engineering student at the University of Málaga (UMA), passionate about backend development, networking and software engineering.
+Computer Engineering student at the University of Málaga (UMA), currently building backend projects with Java and Spring Boot, focusing on networking, REST APIs and software architecture.
 
  - Github: https://github.com/raulperezmoreno71/
  - LinkedIn: https://www.linkedin.com/in/ra%C3%BAl-p%C3%A9rez-moreno-ba0aab3a7/

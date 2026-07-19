@@ -1,4 +1,4 @@
-package io.github.raulperezmoreno71.threatintel.service;
+package io.github.raulperezmoreno71.threatintel.model;
 
 public class HttpAnalysisResult {
     private long responseTimeMs;

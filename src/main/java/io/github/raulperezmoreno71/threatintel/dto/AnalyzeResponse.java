@@ -1,5 +1,7 @@
 package io.github.raulperezmoreno71.threatintel.dto;
 
+import io.github.raulperezmoreno71.threatintel.model.SslAnalysisResult;
+
 import java.util.List;
 
 public class AnalyzeResponse {
@@ -13,6 +15,7 @@ public class AnalyzeResponse {
     private String server;
     private Long contentLength;
     private long responseTime;
+    private SslAnalysisResult ssl;
 
     public AnalyzeResponse () {
 
@@ -28,7 +31,8 @@ public class AnalyzeResponse {
             String contentType,
             String server,
             Long contentLength,
-            long responseTime
+            long responseTime,
+            SslAnalysisResult sslAnalysisResult
     ) {
         this.message = message;
         this.url = url;
@@ -40,6 +44,7 @@ public class AnalyzeResponse {
         this.server = server;
         this.contentLength = contentLength;
         this.responseTime = responseTime;
+        this.ssl = sslAnalysisResult;
     }
 
     public String getMessage () {return this.message;}
@@ -81,4 +86,8 @@ public class AnalyzeResponse {
     public long getResponseTimeMs () {return this.responseTime;}
 
     public void setResponseTimeMs (long responseTime) {this.responseTime = responseTime;}
+
+    public SslAnalysisResult getSsl() {return this.ssl;}
+
+    public void setSsl(SslAnalysisResult sslAnalysisResult) {this.ssl = sslAnalysisResult;}
 }

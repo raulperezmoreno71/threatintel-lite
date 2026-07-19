@@ -1,4 +1,4 @@
-package io.github.raulperezmoreno71.threatintel.service;
+package io.github.raulperezmoreno71.threatintel.model;
 
 import java.net.http.HttpResponse;
 
