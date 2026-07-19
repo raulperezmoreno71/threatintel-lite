@@ -2,7 +2,7 @@
 
 ## Overview
 
-ThreatIntel Lite is a REST API built with Spring Boot that analyzes different aspects of a URL, including DNS resolution, HTTP behavior and SSL/TLS certificate information.
+ThreatIntel Lite is a REST API built with Spring Boot that analyzes different aspects of a URL, including DNS resolution, HTTP behavior, SSL/TLS certificate information and HTTP security headers.
 
 The project is designed to explore how backend applications interact with Internet protocols such as DNS and HTTP while following clean architecture principles and modern Java development practices.
 
@@ -25,6 +25,9 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
  - [x] Retrieve certificate issuer and subject.
  - [x] Retrieve certificate validity dates.
  - [x] Calculate remaining days until certificate expiration.
+ - [x] Analyze common HTTP security headers.
+ - [x] Detect the presence of important security headers.
+ - [x] Retrieve the value of each detected security header.
  - [x] Follow a clean layered architecture (Controller, Service, DTO and Exception Handler).
 
 ## Tech Stack
@@ -65,7 +68,7 @@ Defines the request and response objects exchanged between the API and its clien
 
 ### `model`
 
-Contains internal domain models used by the service layer during the analysis process.
+Contains internal domain models that represent the results of the different analysis modules (HTTP, SSL/TLS and Security Headers).
 
 ### `exception`
 
@@ -84,7 +87,7 @@ POST /api/analyze
 Content-Type: application/json
 
 {
-    "url": "https://google.com"
+    "url": "https://github.com"
 }
 ```
 
@@ -92,25 +95,51 @@ Content-Type: application/json
 
 ```json
 {
-    "message": "URL analyzed successfully",
-    "url": "https://google.com",
-    "domain": "google.com",
-    "ips": [
-        "216.58.205.46"
-    ],
-    "httpStatusCode": 301,
-    "redirectLocation": "https://www.google.com",
-    "contentType": "text/html; charset=UTF-8",
-    "server": "gws",
-    "contentLength": 220,
-    "responseTimeMs": 106,
-    "ssl": {
-        "issuer": "CN=WR2,O=Google Trust Services,C=US",
-        "subject": "CN=*.google.com",
-        "validFrom": "2026-06-29",
-        "validUntil": "2026-09-21",
-        "daysUntilExpiration": 64
+  "message": "URL analyzed successfully",
+  "url": "https://github.com/",
+  "domain": "github.com",
+  "ips": [
+    "140.82.121.4"
+  ],
+  "httpStatusCode": 200,
+  "redirectLocation": null,
+  "contentType": "text/html; charset=utf-8",
+  "server": "github.com",
+  "contentLength": null,
+  "responseTimeMs": 715,
+  "ssl": {
+    "issuer": "CN=Sectigo Public Server Authentication CA DV E36,O=Sectigo Limited,C=GB",
+    "subject": "CN=github.com",
+    "validFrom": "2026-07-03",
+    "validUntil": "2026-09-30",
+    "daysUntilExpiration": 73
+  },
+  "securityHeaders": {
+    "strictTransportSecurity": {
+      "present": true,
+      "value": "max-age=31536000; includeSubdomains; preload"
+    },
+    "contentSecurityPolicy": {
+      "present": true,
+      "value": "default-src 'none'; base-uri 'self'; child-src ... .com/assets-cdn/worker/"
+    },
+    "xFrameOptions": {
+      "present": true,
+      "value": "deny"
+    },
+    "xContentTypeOptions": {
+      "present": true,
+      "value": "nosniff"
+    },
+    "referrerPolicy": {
+      "present": true,
+      "value": "origin-when-cross-origin, strict-origin-when-cross-origin"
+    },
+    "permissionsPolicy": {
+      "present": false,
+      "value": null
     }
+  }
 }
 ```
 
@@ -180,6 +209,7 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] HTTP status code analysis
  - [x] HTTP redirection detection
  - [x] HTTP response header analysis
+ - [x] HTTP security headers analysis
  - [x] HTTP response time measurement
  - [x] Global exception handling
  - [x] SSL/TLS certificate analysis
@@ -188,7 +218,6 @@ The project is being developed incrementally, with each milestone focused on lea
 ### Planned
 
  - [ ] Redirect chain analysis
- - [ ] Security headers analysis
  - [ ] REST API documentation (OpenAPI / Swagger)
  - [ ] Unit and integration tests
  - [ ] Docker support

@@ -1,8 +1,25 @@
 package io.github.raulperezmoreno71.threatintel.dto;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import io.github.raulperezmoreno71.threatintel.model.SecurityHeadersAnalysisResult;
 import io.github.raulperezmoreno71.threatintel.model.SslAnalysisResult;
 
 import java.util.List;
+
+@JsonPropertyOrder({
+        "message",
+        "url",
+        "domain",
+        "ips",
+        "httpStatusCode",
+        "redirectLocation",
+        "contentType",
+        "server",
+        "contentLength",
+        "responseTimeMs",
+        "ssl",
+        "securityHeaders"
+})
 
 public class AnalyzeResponse {
     private String message;
@@ -14,8 +31,9 @@ public class AnalyzeResponse {
     private String contentType;
     private String server;
     private Long contentLength;
-    private long responseTime;
+    private long responseTimeMs;
     private SslAnalysisResult ssl;
+    private SecurityHeadersAnalysisResult securityHeaders;
 
     public AnalyzeResponse () {
 
@@ -31,8 +49,9 @@ public class AnalyzeResponse {
             String contentType,
             String server,
             Long contentLength,
-            long responseTime,
-            SslAnalysisResult sslAnalysisResult
+            long responseTimeMs,
+            SslAnalysisResult sslAnalysisResult,
+            SecurityHeadersAnalysisResult securityHeaders
     ) {
         this.message = message;
         this.url = url;
@@ -43,8 +62,9 @@ public class AnalyzeResponse {
         this.contentType = contentType;
         this.server = server;
         this.contentLength = contentLength;
-        this.responseTime = responseTime;
+        this.responseTimeMs = responseTimeMs;
         this.ssl = sslAnalysisResult;
+        this.securityHeaders = securityHeaders;
     }
 
     public String getMessage () {return this.message;}
@@ -83,11 +103,15 @@ public class AnalyzeResponse {
 
     public void setContentLength (Long contentLength) {this.contentLength = contentLength;}
 
-    public long getResponseTimeMs () {return this.responseTime;}
+    public long getResponseTimeMs () {return this.responseTimeMs;}
 
-    public void setResponseTimeMs (long responseTime) {this.responseTime = responseTime;}
+    public void setResponseTimeMs (long responseTimeMs) {this.responseTimeMs = responseTimeMs;}
 
     public SslAnalysisResult getSsl() {return this.ssl;}
 
     public void setSsl(SslAnalysisResult sslAnalysisResult) {this.ssl = sslAnalysisResult;}
+
+    public SecurityHeadersAnalysisResult getSecurityHeaders() {return this.securityHeaders;}
+
+    public void setSecurityHeaders(SecurityHeadersAnalysisResult securityHeaders) {this.securityHeaders = securityHeaders;}
 }

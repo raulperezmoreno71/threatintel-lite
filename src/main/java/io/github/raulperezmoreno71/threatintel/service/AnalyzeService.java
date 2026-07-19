@@ -2,9 +2,7 @@ package io.github.raulperezmoreno71.threatintel.service;
 
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeRequest;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeResponse;
-import io.github.raulperezmoreno71.threatintel.model.HttpAnalysisResult;
-import io.github.raulperezmoreno71.threatintel.model.HttpRequestResult;
-import io.github.raulperezmoreno71.threatintel.model.SslAnalysisResult;
+import io.github.raulperezmoreno71.threatintel.model.*;
 import org.springframework.stereotype.Service;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -37,10 +35,15 @@ public class AnalyzeService {
         validateUrl(url);
 
         String domain = extractDomain(url);
-        SslAnalysisResult sslAnalysisResult = analyzeSslCertificate(url, domain);
         List<String> ips = resolveIp(domain);
+
         HttpRequestResult requestResult = getHttpResponse(url);
+
         HttpAnalysisResult analysisResult = analyzeHttpResponse(requestResult);
+
+        SecurityHeadersAnalysisResult securityHeaders = analyzeSecurityHeaders(requestResult.getHttpResponse());
+
+        SslAnalysisResult sslAnalysisResult = analyzeSslCertificate(url, domain);
 
         return new AnalyzeResponse(
                 "URL analyzed successfully",
@@ -53,7 +56,8 @@ public class AnalyzeService {
                 analysisResult.getServer(),
                 analysisResult.getContentLength(),
                 analysisResult.getResponseTimeMs(),
-                sslAnalysisResult
+                sslAnalysisResult,
+                securityHeaders
         );
     }
 
@@ -202,5 +206,31 @@ public class AnalyzeService {
             throw new RuntimeException("Could not analyze SSL certificate", e);
 
         }
+    }
+
+    private SecurityHeadersAnalysisResult analyzeSecurityHeaders (HttpResponse<String> response) {
+
+        SecurityHeaderResult strictTransportSecurity = analyzeSecurityHeader(response, "Strict-Transport-Security");
+        SecurityHeaderResult contentSecurityPolicy = analyzeSecurityHeader(response, "Content-Security-Policy");
+        SecurityHeaderResult xFrameOptions = analyzeSecurityHeader(response, "X-Frame-Options");
+        SecurityHeaderResult xContentTypeOptions = analyzeSecurityHeader(response, "X-Content-Type-Options");
+        SecurityHeaderResult referrerPolicy = analyzeSecurityHeader(response, "Referrer-Policy");
+        SecurityHeaderResult permissionsPolicy = analyzeSecurityHeader(response, "Permissions-Policy");
+
+        return new SecurityHeadersAnalysisResult(
+                strictTransportSecurity,
+                contentSecurityPolicy,
+                xFrameOptions,
+                xContentTypeOptions,
+                referrerPolicy,
+                permissionsPolicy
+        );
+    }
+
+    private SecurityHeaderResult analyzeSecurityHeader (HttpResponse<String> response, String headerName) {
+
+        String value = response.headers().firstValue(headerName).orElse(null);
+
+        return new SecurityHeaderResult(value != null, value);
     }
 }
