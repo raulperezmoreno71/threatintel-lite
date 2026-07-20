@@ -2,7 +2,7 @@
 
 ## Overview
 
-ThreatIntel Lite is a REST API built with Spring Boot that analyzes different aspects of a URL, including DNS resolution, HTTP behavior, SSL/TLS certificate information and HTTP security headers.
+ThreatIntel Lite is a REST API built with Spring Boot that analyzes different aspects of a URL and returns the results grouped into dedicated analysis modules, including DNS resolution, HTTP behavior, SSL/TLS certificate information and HTTP security headers.
 
 The project is designed to explore how backend applications interact with Internet protocols such as DNS and HTTP while following clean architecture principles and modern Java development practices.
 
@@ -28,6 +28,7 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
  - [x] Analyze common HTTP security headers.
  - [x] Detect the presence of important security headers.
  - [x] Retrieve the value of each detected security header.
+ - [x] Return structured JSON responses grouped by analysis module.
  - [x] Follow a clean layered architecture (Controller, Service, DTO and Exception Handler).
 
 ## Tech Stack
@@ -68,7 +69,7 @@ Defines the request and response objects exchanged between the API and its clien
 
 ### `model`
 
-Contains internal domain models that represent the results of the different analysis modules (HTTP, SSL/TLS and Security Headers).
+Contains internal domain models that represent the results of the different analysis modules, including DNS, HTTP, SSL/TLS and Security Headers.
 
 ### `exception`
 
@@ -93,26 +94,32 @@ Content-Type: application/json
 
 **Successful Response**
 
+> The Content Security Policy value has been shortened for readability.
+
 ```json
 {
   "message": "URL analyzed successfully",
   "url": "https://github.com/",
   "domain": "github.com",
-  "ips": [
-    "140.82.121.4"
-  ],
-  "httpStatusCode": 200,
-  "redirectLocation": null,
-  "contentType": "text/html; charset=utf-8",
-  "server": "github.com",
-  "contentLength": null,
-  "responseTimeMs": 715,
+  "dns": {
+    "ips": [
+      "140.82.121.3"
+    ]
+  },
+  "http": {
+    "statusCode": 200,
+    "redirectLocation": null,
+    "contentType": "text/html; charset=utf-8",
+    "server": "github.com",
+    "contentLength": null,
+    "responseTimeMs": 913
+  },
   "ssl": {
     "issuer": "CN=Sectigo Public Server Authentication CA DV E36,O=Sectigo Limited,C=GB",
     "subject": "CN=github.com",
     "validFrom": "2026-07-03",
     "validUntil": "2026-09-30",
-    "daysUntilExpiration": 73
+    "daysUntilExpiration": 72
   },
   "securityHeaders": {
     "strictTransportSecurity": {
@@ -121,7 +128,7 @@ Content-Type: application/json
     },
     "contentSecurityPolicy": {
       "present": true,
-      "value": "default-src 'none'; base-uri 'self'; child-src ... .com/assets-cdn/worker/"
+      "value": "default-src 'none'; base-uri 'self'; ... gist.github.com/assets-cdn/worker/"
     },
     "xFrameOptions": {
       "present": true,
@@ -213,7 +220,7 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] HTTP response time measurement
  - [x] Global exception handling
  - [x] SSL/TLS certificate analysis
- - [x] Structured JSON responses
+ - [x] Modular JSON responses structure
 
 ### Planned
 
@@ -223,7 +230,7 @@ The project is being developed incrementally, with each milestone focused on lea
  - [ ] Docker support
  - [ ] Authentication and user accounts
  - [ ] Persistent analysis history 
- - [ ] Domain reputation analysis using external services.
+ - [ ] Domain reputation analysis using external services
 
 ## Author
 

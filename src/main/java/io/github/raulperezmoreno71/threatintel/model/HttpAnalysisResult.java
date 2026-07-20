@@ -2,7 +2,7 @@ package io.github.raulperezmoreno71.threatintel.model;
 
 public class HttpAnalysisResult {
     private long responseTimeMs;
-    private int httpStatusCode;
+    private int statusCode;
     private String redirectLocation;
     private String contentType;
     private String server;
@@ -13,7 +13,7 @@ public class HttpAnalysisResult {
     }
 
     public HttpAnalysisResult (
-            int httpStatusCode,
+            int statusCode,
             String redirectLocation,
             String contentType,
             String server,
@@ -21,19 +21,19 @@ public class HttpAnalysisResult {
             long resposteTimeMs
     ) {
         this.responseTimeMs = resposteTimeMs;
-        this.httpStatusCode = httpStatusCode;
+        this.statusCode = statusCode;
         this.redirectLocation = redirectLocation;
         this.contentType = contentType;
         this.server = server;
         this.contentLength = contentLength;
     }
 
-    public int getHttpStatusCode() {
-        return this.httpStatusCode;
+    public int getStatusCode() {
+        return this.statusCode;
     }
 
-    public void setHttpStatusCode(int httpStatusCode) {
-        this.httpStatusCode = httpStatusCode;
+    public void setStatusCode(int httpStatusCode) {
+        this.statusCode = httpStatusCode;
     }
 
     public long getResponseTimeMs() {

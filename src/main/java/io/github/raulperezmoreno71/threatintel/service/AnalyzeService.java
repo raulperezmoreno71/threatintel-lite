@@ -35,28 +35,24 @@ public class AnalyzeService {
         validateUrl(url);
 
         String domain = extractDomain(url);
-        List<String> ips = resolveIp(domain);
+
+        DnsAnalysisResult dns = analyzeDns(domain);
 
         HttpRequestResult requestResult = getHttpResponse(url);
 
-        HttpAnalysisResult analysisResult = analyzeHttpResponse(requestResult);
+        HttpAnalysisResult http = analyzeHttpResponse(requestResult);
+
+        SslAnalysisResult ssl = analyzeSslCertificate(url, domain);
 
         SecurityHeadersAnalysisResult securityHeaders = analyzeSecurityHeaders(requestResult.getHttpResponse());
-
-        SslAnalysisResult sslAnalysisResult = analyzeSslCertificate(url, domain);
 
         return new AnalyzeResponse(
                 "URL analyzed successfully",
                 url,
                 domain,
-                ips,
-                analysisResult.getHttpStatusCode(),
-                analysisResult.getRedirectLocation(),
-                analysisResult.getContentType(),
-                analysisResult.getServer(),
-                analysisResult.getContentLength(),
-                analysisResult.getResponseTimeMs(),
-                sslAnalysisResult,
+                dns,
+                http,
+                ssl,
                 securityHeaders
         );
     }
@@ -81,7 +77,7 @@ public class AnalyzeService {
         return URI.create(url).getHost();
     }
 
-    private List<String> resolveIp (String domain) {
+    private DnsAnalysisResult analyzeDns (String domain) {
         List<String> ips = new ArrayList<>();
 
         try {
@@ -95,7 +91,7 @@ public class AnalyzeService {
             ips.add("Could not resolve IP");
         }
 
-        return ips;
+        return new DnsAnalysisResult(ips);
     }
 
     private HttpRequestResult getHttpResponse (String url) {
