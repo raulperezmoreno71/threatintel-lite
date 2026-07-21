@@ -1,12 +1,27 @@
 package io.github.raulperezmoreno71.threatintel.model;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
+import java.util.List;
+
+@JsonPropertyOrder({
+        "statusCode",
+        "contentType",
+        "server",
+        "contentLength",
+        "finalUrl",
+        "totalResponseTimeMs",
+        "redirectChain"
+})
+
 public class HttpAnalysisResult {
-    private long responseTimeMs;
+    private long totalResponseTimeMs;
     private int statusCode;
-    private String redirectLocation;
     private String contentType;
     private String server;
     private Long contentLength;
+    private String finalUrl;
+    private List<RedirectStep> redirectChain;
 
     public HttpAnalysisResult ()  {
 
@@ -14,18 +29,20 @@ public class HttpAnalysisResult {
 
     public HttpAnalysisResult (
             int statusCode,
-            String redirectLocation,
             String contentType,
             String server,
             Long contentLength,
-            long resposteTimeMs
+            String finalUrl,
+            long totalResponseTimeMs,
+            List<RedirectStep> redirectChain
     ) {
-        this.responseTimeMs = resposteTimeMs;
+        this.totalResponseTimeMs = totalResponseTimeMs;
         this.statusCode = statusCode;
-        this.redirectLocation = redirectLocation;
         this.contentType = contentType;
         this.server = server;
         this.contentLength = contentLength;
+        this.finalUrl = finalUrl;
+        this.redirectChain = redirectChain;
     }
 
     public int getStatusCode() {
@@ -36,20 +53,12 @@ public class HttpAnalysisResult {
         this.statusCode = httpStatusCode;
     }
 
-    public long getResponseTimeMs() {
-        return this.responseTimeMs;
+    public long getTotalResponseTimeMs() {
+        return this.totalResponseTimeMs;
     }
 
-    public void setResponseTimeMs (long resposteTimeMs) {
-        this.responseTimeMs = resposteTimeMs;
-    }
-
-    public String getRedirectLocation() {
-        return this.redirectLocation;
-    }
-
-    public void setRedirectLocation(String redirectLocation) {
-        this.redirectLocation = redirectLocation;
+    public void setTotalResponseTimeMs (long totalResponseTimeMs) {
+        this.totalResponseTimeMs = totalResponseTimeMs;
     }
 
     public String getContentType() {
@@ -75,4 +84,12 @@ public class HttpAnalysisResult {
     public void setContentLength(Long contentLength) {
         this.contentLength = contentLength;
     }
+
+    public List<RedirectStep> getRedirectChain() {return this.redirectChain;}
+
+    public void setRedirectChain(List<RedirectStep> redirectChain) {this.redirectChain = redirectChain;}
+
+    public String getFinalUrl() {return this.finalUrl;}
+
+    public void setFinalUrl(String finalUrl) {this.finalUrl = finalUrl;}
 }

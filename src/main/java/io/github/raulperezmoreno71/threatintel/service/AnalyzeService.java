@@ -28,6 +28,7 @@ import java.net.http.HttpClient;
 public class AnalyzeService {
 
     private static final int SSL_TIMEOUT_MS = 5000;
+    private static final int MAX_REDIRECTS = 10;
 
     public AnalyzeResponse analyze (AnalyzeRequest request) {
         String url = request.getUrl();
@@ -38,13 +39,16 @@ public class AnalyzeService {
 
         DnsAnalysisResult dns = analyzeDns(domain);
 
-        HttpRequestResult requestResult = getHttpResponse(url);
+        HttpRedirectResult redirectResult = followRedirects(url);
 
-        HttpAnalysisResult http = analyzeHttpResponse(requestResult);
+        HttpAnalysisResult http = analyzeHttpResponse(redirectResult);
 
-        SslAnalysisResult ssl = analyzeSslCertificate(url, domain);
+        String finalUrl = http.getFinalUrl();
+        String finalDomain = extractDomain(finalUrl);
 
-        SecurityHeadersAnalysisResult securityHeaders = analyzeSecurityHeaders(requestResult.getHttpResponse());
+        SslAnalysisResult ssl = analyzeSslCertificate(finalUrl, finalDomain);
+
+        SecurityHeadersAnalysisResult securityHeaders = analyzeSecurityHeaders(redirectResult.getFinalResponse());
 
         return new AnalyzeResponse(
                 "URL analyzed successfully",
@@ -120,25 +124,80 @@ public class AnalyzeService {
         }
     }
 
-    private HttpAnalysisResult analyzeHttpResponse (HttpRequestResult requestResult) {
-        HttpResponse<String> response = requestResult.getHttpResponse();
+    private HttpAnalysisResult analyzeHttpResponse (HttpRedirectResult redirectResult) {
+        HttpResponse<String> response = redirectResult.getFinalResponse();
 
-        long responseTimeMs = requestResult.getResponseTimeMs();
+        long totalResponseTimeMs = redirectResult.getTotalResponseTimeMs();
 
-        int httpStatusCode = response.statusCode();
-        String redirectLocation = response.headers().firstValue("Location").orElse(null);
+        List<RedirectStep> redirectChain = redirectResult.getRedirectChain();
+
+        int statusCode = response.statusCode();
+
+        String finalUrl = redirectChain.get(redirectChain.size() -1).getUrl();
+
         String contentType = response.headers().firstValue("Content-Type").orElse(null);
         String server = response.headers().firstValue("Server").orElse(null);
         Long contentLength = response.headers().firstValue("Content-Length").map(Long::parseLong).orElse(null);
 
         return new HttpAnalysisResult(
-                httpStatusCode,
-                redirectLocation,
+                statusCode,
                 contentType,
                 server,
                 contentLength,
-                responseTimeMs
+                finalUrl,
+                totalResponseTimeMs,
+                redirectChain
         );
+    }
+
+    private HttpRedirectResult followRedirects (String url) {
+        List<RedirectStep> redirectChain = new ArrayList<>();
+
+        long totalResponseTimeMs = 0;
+        String currentUrl = url;
+        HttpResponse<String> finalResponse = null;
+        int redirectCount = 0;
+
+        while (redirectCount <= MAX_REDIRECTS) {
+            HttpRequestResult requestResult = getHttpResponse(currentUrl);
+
+            HttpResponse<String> response = requestResult.getHttpResponse();
+
+            long responseTimeMs = requestResult.getResponseTimeMs();
+
+            totalResponseTimeMs += responseTimeMs;
+            finalResponse = response;
+
+            int statusCode = response.statusCode();
+
+            String location = response.headers().firstValue("Location").orElse(null);
+
+            RedirectStep redirectStep = new RedirectStep(currentUrl, statusCode, location, responseTimeMs);
+
+            redirectChain.add(redirectStep);
+
+            if (!isRedirectStatus(statusCode) || location == null) {
+                break;
+            }
+
+            if (redirectCount == MAX_REDIRECTS) {
+                throw new RuntimeException("Maximum number of redirects exceeded");
+            }
+
+            currentUrl = URI.create(currentUrl).resolve(location).toString();
+
+            redirectCount++;
+        }
+
+        return new HttpRedirectResult(finalResponse, redirectChain, totalResponseTimeMs);
+    }
+
+    private boolean isRedirectStatus (int statusCode) {
+        return statusCode == 301
+                || statusCode == 302
+                || statusCode == 303
+                || statusCode == 307
+                || statusCode == 308;
     }
 
     private SslAnalysisResult analyzeSslCertificate (String url, String host) {

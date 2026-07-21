@@ -19,7 +19,6 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
  - [x] Identify the responding web server.
  - [x] Retrieve the declared Content-Length header.
  - [x] Measure the HTTP response time.
- - [x] Return structured JSON responses.
  - [x] Handle invalid requests through global exception handling.
  - [x] Analyze SSL/TLS certificates.
  - [x] Retrieve certificate issuer and subject.
@@ -29,6 +28,9 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
  - [x] Detect the presence of important security headers.
  - [x] Retrieve the value of each detected security header.
  - [x] Return structured JSON responses grouped by analysis module.
+ - [x] Follow HTTP redirect chains manually.
+ - [x] Measure response time for each redirect.
+ - [x] Identify the final destination URL.
  - [x] Follow a clean layered architecture (Controller, Service, DTO and Exception Handler).
 
 ## Tech Stack
@@ -108,18 +110,26 @@ Content-Type: application/json
   },
   "http": {
     "statusCode": 200,
-    "redirectLocation": null,
     "contentType": "text/html; charset=utf-8",
     "server": "github.com",
     "contentLength": null,
-    "responseTimeMs": 913
+    "finalUrl": "https://github.com/",
+    "totalResponseTimeMs": 487,
+    "redirectChain": [
+      {
+        "url": "https://github.com/",
+        "statusCode": 200,
+        "location": null,
+        "responseTimeMs": 487
+      }
+    ]
   },
   "ssl": {
     "issuer": "CN=Sectigo Public Server Authentication CA DV E36,O=Sectigo Limited,C=GB",
     "subject": "CN=github.com",
     "validFrom": "2026-07-03",
     "validUntil": "2026-09-30",
-    "daysUntilExpiration": 72
+    "daysUntilExpiration": 71
   },
   "securityHeaders": {
     "strictTransportSecurity": {
@@ -128,7 +138,7 @@ Content-Type: application/json
     },
     "contentSecurityPolicy": {
       "present": true,
-      "value": "default-src 'none'; base-uri 'self'; ... gist.github.com/assets-cdn/worker/"
+      "value": "default-src 'none'; base-uri 'self'; ... .com/assets-cdn/worker/"
     },
     "xFrameOptions": {
       "present": true,
@@ -220,16 +230,16 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] HTTP response time measurement
  - [x] Global exception handling
  - [x] SSL/TLS certificate analysis
- - [x] Modular JSON responses structure
+ - [x] Modular JSON response structure
+ - [x] Redirect chain analysis
 
 ### Planned
 
- - [ ] Redirect chain analysis
  - [ ] REST API documentation (OpenAPI / Swagger)
  - [ ] Unit and integration tests
  - [ ] Docker support
  - [ ] Authentication and user accounts
- - [ ] Persistent analysis history 
+ - [ ] Persistent analysis history
  - [ ] Domain reputation analysis using external services
 
 ## Author
