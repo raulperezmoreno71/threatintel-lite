@@ -2,11 +2,62 @@
 
 ## Overview
 
-ThreatIntel Lite is a REST API built with Spring Boot that analyzes different aspects of a URL and returns the results grouped into dedicated analysis modules, including DNS resolution, HTTP behavior, SSL/TLS certificate information and HTTP security headers.
+ThreatIntel Lite is a REST API built with Spring Boot that analyzes different aspects of a URL and evaluates its HTTP security configuration. The results are grouped into dedicated analysis modules, including DNS resolution, HTTP behavior, SSL/TLS certificate information and HTTP security header assessment.
 
-The project is designed to explore how backend applications interact with Internet protocols such as DNS and HTTP while following clean architecture principles and modern Java development practices.
+The project is designed to explore how backend applications interact with Internet protocols such as DNS and HTTP while following clean architecture principles and modern Java development practices. 
+
+Rather than only collecting HTTP metadata, ThreatIntel Lite also evaluates the security posture of a target website by inspecting common security headers and providing actionable recommendations.
 
 ThreatIntel Lite is being developed incrementally, with each feature focusing on understanding a specific backend or networking concept rather than simply adding functionality.
+
+## Analysis Workflow
+
+```text
+                User Request
+                     │
+                     ▼
+              URL Validation
+                     │
+                     ▼
+            Domain Extraction
+                     │
+                     ▼
+┌──────────────────────────────────────────────┐
+│              Analysis Modules                │
+├──────────────────────────────────────────────┤
+│                                              │
+│  DNS Analysis                                │
+│      └── Resolve IP addresses                │
+│                                              │
+│  HTTP Analysis                               │
+│      ├── Redirect chain                      │
+│      ├── Status code                         │
+│      ├── Content-Type                        │
+│      ├── Server                              │
+│      ├── Content-Length                      │
+│      └── Response time                       │
+│                                              │
+│  SSL/TLS Analysis                            │
+│      ├── Issuer                              │
+│      ├── Subject                             │
+│      ├── Validity period                     │
+│      └── Days until expiration               │
+│                                              │
+│  Security Headers Assessment                 │
+│      ├── HSTS                                │
+│      ├── CSP                                 │
+│      ├── X-Frame-Options                     │
+│      ├── X-Content-Type-Options              │
+│      ├── Referrer-Policy                     │
+│      └── Permissions-Policy                  │
+│                                              │
+└──────────────────────────────────────────────┘
+                     │
+                     ▼
+          Structured JSON Response
+```
+
+ThreatIntel Lite processes each URL through independent analysis modules and combines their results into a single structured JSON response.
 
 ## Features
 
@@ -14,19 +65,19 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
  - [x] Extract the domain from a URL.
  - [x] Resolve all available IP addresses through DNS.
  - [x] Retrieve the HTTP status code.
- - [x] Detect HTTP redirections and their destination.
  - [x] Detect the response Content-Type.
  - [x] Identify the responding web server.
  - [x] Retrieve the declared Content-Length header.
- - [x] Measure the HTTP response time.
+ - [x] Measure the total HTTP response time.
  - [x] Handle invalid requests through global exception handling.
  - [x] Analyze SSL/TLS certificates.
  - [x] Retrieve certificate issuer and subject.
  - [x] Retrieve certificate validity dates.
  - [x] Calculate remaining days until certificate expiration.
  - [x] Analyze common HTTP security headers.
- - [x] Detect the presence of important security headers.
- - [x] Retrieve the value of each detected security header.
+ - [x] Evaluate their security configuration.
+ - [x] Classify each security header as GOOD, WARNING or MISSING.
+ - [x] Provide security recommendations for each analyzed header.
  - [x] Return structured JSON responses grouped by analysis module.
  - [x] Follow HTTP redirect chains manually.
  - [x] Measure response time for each redirect.
@@ -71,7 +122,7 @@ Defines the request and response objects exchanged between the API and its clien
 
 ### `model`
 
-Contains internal domain models that represent the results of the different analysis modules, including DNS, HTTP, SSL/TLS and Security Headers.
+Contains internal domain models representing the results of each analysis module, including DNS, HTTP, redirect chains, SSL/TLS and security header assessments.
 
 ### `exception`
 
@@ -96,6 +147,8 @@ Content-Type: application/json
 
 **Successful Response**
 
+> Each security header includes its detected value, a security assessment and an actionable recommendation when applicable.
+> 
 > The Content Security Policy value has been shortened for readability.
 
 ```json
@@ -114,13 +167,13 @@ Content-Type: application/json
     "server": "github.com",
     "contentLength": null,
     "finalUrl": "https://github.com/",
-    "totalResponseTimeMs": 487,
+    "totalResponseTimeMs": 640,
     "redirectChain": [
       {
         "url": "https://github.com/",
         "statusCode": 200,
         "location": null,
-        "responseTimeMs": 487
+        "responseTimeMs": 640
       }
     ]
   },
@@ -129,32 +182,44 @@ Content-Type: application/json
     "subject": "CN=github.com",
     "validFrom": "2026-07-03",
     "validUntil": "2026-09-30",
-    "daysUntilExpiration": 71
+    "daysUntilExpiration": 70
   },
   "securityHeaders": {
     "strictTransportSecurity": {
       "present": true,
-      "value": "max-age=31536000; includeSubdomains; preload"
+      "value": "max-age=31536000; includeSubdomains; preload",
+      "status": "GOOD",
+      "recommendation": null
     },
     "contentSecurityPolicy": {
       "present": true,
-      "value": "default-src 'none'; base-uri 'self'; ... .com/assets-cdn/worker/"
+      "value": "default-src 'none'; ... gist.github.com/assets-cdn/worker/",
+      "status": "WARNING",
+      "recommendation": "Avoid using 'unsafe-inline'. Use nonces or hashes for required inline scripts and styles."
     },
     "xFrameOptions": {
       "present": true,
-      "value": "deny"
+      "value": "deny",
+      "status": "GOOD",
+      "recommendation": null
     },
     "xContentTypeOptions": {
       "present": true,
-      "value": "nosniff"
+      "value": "nosniff",
+      "status": "GOOD",
+      "recommendation": null
     },
     "referrerPolicy": {
       "present": true,
-      "value": "origin-when-cross-origin, strict-origin-when-cross-origin"
+      "value": "origin-when-cross-origin, strict-origin-when-cross-origin",
+      "status": "GOOD",
+      "recommendation": null
     },
     "permissionsPolicy": {
       "present": false,
-      "value": null
+      "value": null,
+      "status": "MISSING",
+      "recommendation": "Add a Permissions-Policy header to restrict access to unnecessary browser features."
     }
   }
 }
@@ -226,15 +291,17 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] HTTP status code analysis
  - [x] HTTP redirection detection
  - [x] HTTP response header analysis
- - [x] HTTP security headers analysis
+ - [x] HTTP security header assessment
  - [x] HTTP response time measurement
  - [x] Global exception handling
  - [x] SSL/TLS certificate analysis
  - [x] Modular JSON response structure
  - [x] Redirect chain analysis
+ - [x] Security header assessment and recommendations
 
 ### Planned
 
+ - [ ] Security score calculation
  - [ ] REST API documentation (OpenAPI / Swagger)
  - [ ] Unit and integration tests
  - [ ] Docker support
@@ -246,7 +313,7 @@ The project is being developed incrementally, with each milestone focused on lea
 
 **Raúl Pérez Moreno**
 
-Computer Engineering student at the University of Málaga (UMA), currently building backend projects with Java and Spring Boot, focusing on networking, REST APIs and software architecture.
+Computer Engineering student at the University of Málaga (UMA), currently developing backend projects with Java and Spring Boot, focusing on networking, REST APIs and software architecture.
 
- - Github: https://github.com/raulperezmoreno71/
+ - GitHub: https://github.com/raulperezmoreno71/
  - LinkedIn: https://www.linkedin.com/in/ra%C3%BAl-p%C3%A9rez-moreno-ba0aab3a7/
