@@ -8,6 +8,8 @@ The project is designed to explore how backend applications interact with Intern
 
 Rather than only collecting HTTP metadata, ThreatIntel Lite also evaluates the security posture of a target website by inspecting common security headers and providing actionable recommendations.
 
+The API also produces an overall security assessment by calculating a weighted security score and assigning a security grade based on the analyzed headers.
+
 ThreatIntel Lite is being developed incrementally, with each feature focusing on understanding a specific backend or networking concept rather than simply adding functionality.
 
 ## Analysis Workflow
@@ -51,6 +53,11 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
 │      ├── Referrer-Policy                     │
 │      └── Permissions-Policy                  │
 │                                              │
+│  Security Assessment                         │
+│      ├── Security score                      │
+│      ├── Security grade                      │
+│      └── Header summary                      │
+│                                              │
 └──────────────────────────────────────────────┘
                      │
                      ▼
@@ -74,10 +81,11 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
  - [x] Retrieve certificate issuer and subject.
  - [x] Retrieve certificate validity dates.
  - [x] Calculate remaining days until certificate expiration.
- - [x] Analyze common HTTP security headers.
- - [x] Evaluate their security configuration.
+ - [x] Analyze and evaluate common HTTP security headers.
  - [x] Classify each security header as GOOD, WARNING or MISSING.
  - [x] Provide security recommendations for each analyzed header.
+ - [x] Calculate an overall website security score.
+ - [x] Assign an overall security grade (A-F).
  - [x] Return structured JSON responses grouped by analysis module.
  - [x] Follow HTTP redirect chains manually.
  - [x] Measure response time for each redirect.
@@ -147,7 +155,7 @@ Content-Type: application/json
 
 **Successful Response**
 
-> Each security header includes its detected value, a security assessment and an actionable recommendation when applicable.
+> Each security header includes its detected value, a security assessment and an actionable recommendation when applicable. The API also calculates an overall security score and grade based on the analyzed headers.
 > 
 > The Content Security Policy value has been shortened for readability.
 
@@ -221,9 +229,26 @@ Content-Type: application/json
       "status": "MISSING",
       "recommendation": "Add a Permissions-Policy header to restrict access to unnecessary browser features."
     }
+  },
+  "securityAssessment": {
+    "score": 75,
+    "grade": "C",
+    "goodHeaders": 4,
+    "warningHeaders": 1,
+    "missingHeaders": 1
   }
 }
 ```
+
+### Security Grade Scale
+
+| Grade | Score |
+|------:|------:|
+| A | 90–100 |
+| B | 80–89 |
+| C | 70–79 |
+| D | 60–69 |
+| F | 0–59 |
 
 **Validation Error**
 
@@ -298,10 +323,12 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] Modular JSON response structure
  - [x] Redirect chain analysis
  - [x] Security header assessment and recommendations
+ - [x] Overall security score calculation
+ - [x] Overall security grade assignment
 
 ### Planned
 
- - [ ] Security score calculation
+ - [ ] Configurable security scoring policy
  - [ ] REST API documentation (OpenAPI / Swagger)
  - [ ] Unit and integration tests
  - [ ] Docker support

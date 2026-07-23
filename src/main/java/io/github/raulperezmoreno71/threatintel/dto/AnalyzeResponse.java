@@ -1,10 +1,7 @@
 package io.github.raulperezmoreno71.threatintel.dto;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import io.github.raulperezmoreno71.threatintel.model.DnsAnalysisResult;
-import io.github.raulperezmoreno71.threatintel.model.HttpAnalysisResult;
-import io.github.raulperezmoreno71.threatintel.model.SecurityHeadersAnalysisResult;
-import io.github.raulperezmoreno71.threatintel.model.SslAnalysisResult;
+import io.github.raulperezmoreno71.threatintel.model.*;
 
 @JsonPropertyOrder({
         "message",
@@ -13,7 +10,8 @@ import io.github.raulperezmoreno71.threatintel.model.SslAnalysisResult;
         "dns",
         "http",
         "ssl",
-        "securityHeaders"
+        "securityHeaders",
+        "securityAssessment"
 })
 
 public class AnalyzeResponse {
@@ -25,6 +23,7 @@ public class AnalyzeResponse {
     private HttpAnalysisResult http;
     private SslAnalysisResult ssl;
     private SecurityHeadersAnalysisResult securityHeaders;
+    private SecurityAssessmentResult securityAssessment;
 
     public AnalyzeResponse () {
 
@@ -37,7 +36,8 @@ public class AnalyzeResponse {
             DnsAnalysisResult dns,
             HttpAnalysisResult http,
             SslAnalysisResult ssl,
-            SecurityHeadersAnalysisResult securityHeaders
+            SecurityHeadersAnalysisResult securityHeaders,
+            SecurityAssessmentResult securityAssessment
     ) {
         this.message = message;
         this.url = url;
@@ -46,6 +46,7 @@ public class AnalyzeResponse {
         this.http = http;
         this.ssl = ssl;
         this.securityHeaders = securityHeaders;
+        this.securityAssessment = securityAssessment;
     }
 
     public String getMessage () {return this.message;}
@@ -75,4 +76,8 @@ public class AnalyzeResponse {
     public SecurityHeadersAnalysisResult getSecurityHeaders() {return this.securityHeaders;}
 
     public void setSecurityHeaders(SecurityHeadersAnalysisResult securityHeaders) {this.securityHeaders = securityHeaders;}
+
+    public SecurityAssessmentResult getSecurityAssessment () {return this.securityAssessment;}
+
+    public void setSecurityAssessment (SecurityAssessmentResult securityAssessment) {this.securityAssessment = securityAssessment;}
 }
