@@ -8,7 +8,7 @@ The project is designed to explore how backend applications interact with Intern
 
 Rather than only collecting HTTP metadata, ThreatIntel Lite also evaluates the security posture of a target website by inspecting common security headers and providing actionable recommendations.
 
-The API also produces an overall security assessment by calculating a weighted security score and assigning a security grade based on the analyzed headers.
+The API also produces an overall HTTP security header assessment by calculating a weighted score and assigning a security grade based on the analyzed headers.
 
 ThreatIntel Lite is being developed incrementally, with each feature focusing on understanding a specific backend or networking concept rather than simply adding functionality.
 
@@ -43,7 +43,9 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
 │      ├── Issuer                              │
 │      ├── Subject                             │
 │      ├── Validity period                     │
-│      └── Days until expiration               │
+│      ├── Days until expiration               │
+│      ├── Certificate status                  │
+│      └── Renewal recommendation              │
 │                                              │
 │  Security Headers Assessment                 │
 │      ├── HSTS                                │
@@ -90,6 +92,7 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
  - [x] Follow HTTP redirect chains manually.
  - [x] Measure response time for each redirect.
  - [x] Identify the final destination URL.
+ - [x] Classify SSL certificates as GOOD, WARNING or CRITICAL.
  - [x] Follow a clean layered architecture (Controller, Service, DTO and Exception Handler).
 
 ## Tech Stack
@@ -190,7 +193,9 @@ Content-Type: application/json
     "subject": "CN=github.com",
     "validFrom": "2026-07-03",
     "validUntil": "2026-09-30",
-    "daysUntilExpiration": 70
+    "daysUntilExpiration": 68,
+    "status": "GOOD",
+    "recommendation": null
   },
   "securityHeaders": {
     "strictTransportSecurity": {
@@ -319,7 +324,7 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] HTTP security header assessment
  - [x] HTTP response time measurement
  - [x] Global exception handling
- - [x] SSL/TLS certificate analysis
+ - [x] SSL/TLS certificate status evaluation
  - [x] Modular JSON response structure
  - [x] Redirect chain analysis
  - [x] Security header assessment and recommendations

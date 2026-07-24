@@ -244,12 +244,31 @@ public class AnalyzeService {
 
             long daysUntilExpiration = ChronoUnit.DAYS.between(LocalDate.now(ZoneOffset.UTC), validUntil);
 
+            SslStatus status;
+            String recommendation;
+
+            if (daysUntilExpiration < 0) {
+                status = SslStatus.CRITICAL;
+                recommendation = "Replace the expired SSL certificate immediately.";
+            } else if (daysUntilExpiration == 0) {
+                status = SslStatus.WARNING;
+                recommendation = "The SSL certificate expires today and should be renewed immediately.";
+            } else if (daysUntilExpiration <= 30) {
+                status = SslStatus.WARNING;
+                recommendation = "Renew the SSL certificate before it expires.";
+            } else {
+                status = SslStatus.GOOD;
+                recommendation = null;
+            }
+
             return new SslAnalysisResult(
                     issuer,
                     subject,
                     validFrom,
                     validUntil,
-                    daysUntilExpiration
+                    daysUntilExpiration,
+                    status,
+                    recommendation
             );
 
         } catch (SocketTimeoutException e) {

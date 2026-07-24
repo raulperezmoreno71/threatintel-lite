@@ -9,6 +9,8 @@ public class SslAnalysisResult {
     private LocalDate validFrom;
     private LocalDate validUntil;
     private long daysUntilExpiration;
+    private SslStatus status;
+    private String recommendation;
 
     public SslAnalysisResult () {
 
@@ -19,13 +21,17 @@ public class SslAnalysisResult {
             String subject,
             LocalDate validFrom,
             LocalDate validUntil,
-            long daysUntilExpiration
+            long daysUntilExpiration,
+            SslStatus status,
+            String recommendation
     ) {
         this.issuer = issuer;
         this.subject = subject;
         this.validFrom = validFrom;
         this.validUntil = validUntil;
         this.daysUntilExpiration = daysUntilExpiration;
+        this.status = status;
+        this.recommendation = recommendation;
     }
 
     public String getIssuer() {
@@ -67,4 +73,12 @@ public class SslAnalysisResult {
     public void setDaysUntilExpiration(long daysUntilExpiration) {
         this.daysUntilExpiration = daysUntilExpiration;
     }
+
+    public SslStatus getStatus() {return this.status;}
+
+    public void setStatus(SslStatus status) {this.status = status;}
+
+    public String getRecommendation() {return this.recommendation;}
+
+    public void setRecommendation(String recommendation) {this.recommendation = recommendation;}
 }
