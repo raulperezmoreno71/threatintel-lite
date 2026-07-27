@@ -70,14 +70,20 @@ public class AnalyzeService {
             throw new IllegalArgumentException("URL cannot be null or blank");
         }
 
-        URI uri = URI.create(url);
+        URI uri;
 
-        if (uri.getHost() == null) {
-            throw new IllegalArgumentException("URL must contain a valid host");
+        try {
+            uri = URI.create(url);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("URL has an invalid format");
         }
 
         if (uri.getScheme() == null || (!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme()))) {
             throw new IllegalArgumentException("URL protocol must be HTTP or HTTPS");
+        }
+
+        if (uri.getHost() == null) {
+            throw new IllegalArgumentException("URL must contain a valid host");
         }
     }
 
