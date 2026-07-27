@@ -1,6 +1,7 @@
 package io.github.raulperezmoreno71.threatintel.model;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
@@ -14,13 +15,49 @@ import java.util.List;
         "redirectChain"
 })
 
+@Schema(
+        description = "Contains the results of the HTTP analysis performed on the analyzed URL."
+)
 public class HttpAnalysisResult {
+    @Schema(
+            description = "The total time in milliseconds of the http request.",
+            example = "623"
+    )
     private long totalResponseTimeMs;
+
+    @Schema(
+            description = "The status code returned by the last server.",
+            example = "200"
+    )
     private int statusCode;
+
+    @Schema(
+            description = "Content type returned by the HTTP response.",
+            example = "application/json"
+    )
     private String contentType;
+
+    @Schema(
+            description = "Server identifier returned in the HTTP request.",
+            example = "github.com"
+    )
     private String server;
+
+    @Schema(
+            description = "The total length of the message expressed in bytes.",
+            example = "1260"
+    )
     private Long contentLength;
+
+    @Schema(
+            description = "Final URL after following all HTTP redirects.",
+            example = "https://github.com/"
+    )
     private String finalUrl;
+
+    @Schema(
+            description = "List of all HTTP redirection steps followed during the request."
+    )
     private List<RedirectStep> redirectChain;
 
     public HttpAnalysisResult ()  {

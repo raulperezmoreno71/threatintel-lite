@@ -1,9 +1,34 @@
 package io.github.raulperezmoreno71.threatintel.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(
+        description = "Represents a single HTTP redirection step followed during the request."
+)
 public class RedirectStep {
+
+    @Schema(
+            description = "URL requested during this redirection step.",
+            example = "https://www.github.com/"
+    )
     private String url;
+
+    @Schema(
+            description = "HTTP status code returned for this request.",
+            example = "301"
+    )
     private int statusCode;
+
+    @Schema(
+            description = "URL specified in the Location header for the next redirects.",
+            example = "https://github.com"
+    )
     private String location;
+
+    @Schema(
+            description = "Response time for this request, expressed in milliseconds.",
+            example = "349"
+    )
     private long responseTimeMs;
 
     public RedirectStep () {

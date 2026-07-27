@@ -1,11 +1,40 @@
 package io.github.raulperezmoreno71.threatintel.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(
+        description = "Contains the analysis result of the evaluated HTTP security headers."
+)
 public class SecurityHeadersAnalysisResult {
+
+    @Schema(
+            description = "Analysis of the HTTP Strict-Transport-Security (HSTS) header."
+    )
     private SecurityHeaderResult strictTransportSecurity;
+
+    @Schema(
+            description = "Analysis of the Content-Security-Policy (CSP) header."
+    )
     private SecurityHeaderResult contentSecurityPolicy;
+
+    @Schema(
+            description = "Analysis of the X-Frame-Options header."
+    )
     private SecurityHeaderResult xFrameOptions;
+
+    @Schema(
+            description = "Analysis of the X-Content-Type-Options header."
+    )
     private SecurityHeaderResult xContentTypeOptions;
+
+    @Schema(
+            description = "Analysis of the Referrer-Policy header."
+    )
     private SecurityHeaderResult referrerPolicy;
+
+    @Schema(
+            description = "Analysis of the Permission-Policy header."
+    )
     private SecurityHeaderResult permissionsPolicy;
 
     public SecurityHeadersAnalysisResult() {

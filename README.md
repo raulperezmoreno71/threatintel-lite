@@ -94,6 +94,8 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
  - [x] Identify the final destination URL.
  - [x] Classify SSL certificates as GOOD, WARNING or CRITICAL.
  - [x] Follow a clean layered architecture (Controller, Service, DTO and Exception Handler).
+ - [x] Interactive API documentation with swagger UI.
+ - [x] OpenAPI 3 specification generation.
 
 ## Tech Stack
 
@@ -104,6 +106,7 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
  - **JSON Serialization:** Jackson
  - **Version Control:** Git
  - **Repository Hosting:** GitHub
+ - **API Documentation:** SpringDoc OpenAPI (Swagger UI)
 
 ## Project Structure
 
@@ -295,6 +298,14 @@ By default, the application will start on:
 http://localhost:8080
 ```
 
+### OpenAPI Documentation
+
+Once the application is running, the interactive API documentation is avaliable at:
+
+```text
+http://localhost:8080/swagger-ui/index.html
+```
+
 ### Test the API
 
 Send a POST request to:
@@ -330,11 +341,11 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] Security header assessment and recommendations
  - [x] Overall security score calculation
  - [x] Overall security grade assignment
+ - [x] REST API documentation (OpenAPI / Swagger)
 
 ### Planned
 
  - [ ] Configurable security scoring policy
- - [ ] REST API documentation (OpenAPI / Swagger)
  - [ ] Unit and integration tests
  - [ ] Docker support
  - [ ] Authentication and user accounts

@@ -1,9 +1,30 @@
 package io.github.raulperezmoreno71.threatintel.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema (
+        description = "Standard error response returned when a request cannot be processed."
+)
 public class ErrorResponse {
+
+    @Schema(
+            description = "HTTP status code."
+    )
     private int status;
+
+    @Schema(
+            description = "HTTP error description."
+    )
     private String error;
+
+    @Schema(
+            description = "Detailed explanation of the error."
+    )
     private String message;
+
+    @Schema(
+            description = "API endpoint where the error occurred."
+    )
     private String path;
 
     public ErrorResponse () {

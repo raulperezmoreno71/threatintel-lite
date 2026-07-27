@@ -2,6 +2,7 @@ package io.github.raulperezmoreno71.threatintel.dto;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import io.github.raulperezmoreno71.threatintel.model.*;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 @JsonPropertyOrder({
         "message",
@@ -14,15 +15,52 @@ import io.github.raulperezmoreno71.threatintel.model.*;
         "securityAssessment"
 })
 
+@Schema(
+        description = "Complete result of the URL analysis."
+)
 public class AnalyzeResponse {
+
+    @Schema(
+            description = "Analysis execution result message.",
+            example = "URL analyzed successfully."
+    )
     private String message;
+
+    @Schema(
+            description = "Normalized URL that was analyzed.",
+            example = "https://github.com"
+    )
     private String url;
+
+    @Schema(
+            description = "Extracted domain name.",
+            example = "github.com"
+    )
     private String domain;
 
+    @Schema(
+            description = "DNS resolution results."
+    )
     private DnsAnalysisResult dns;
+
+    @Schema(
+            description = "HTTP response analysis."
+    )
     private HttpAnalysisResult http;
+
+    @Schema(
+            description = "SSL/TLS certificate analysis."
+    )
     private SslAnalysisResult ssl;
+
+    @Schema(
+            description = "Assessment of common HTTP security headers."
+    )
     private SecurityHeadersAnalysisResult securityHeaders;
+
+    @Schema(
+            description = "Overall website security assessment calculated from the analyzed security headers."
+    )
     private SecurityAssessmentResult securityAssessment;
 
     public AnalyzeResponse () {

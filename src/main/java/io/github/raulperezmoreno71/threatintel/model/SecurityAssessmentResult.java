@@ -1,10 +1,41 @@
 package io.github.raulperezmoreno71.threatintel.model;
 
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(
+        description = "Provides an overall security assessment based on the analyzed HTTP security headers."
+)
 public class SecurityAssessmentResult {
+
+    @Schema(
+            description = "Overall security score calculated from the analyzed HTTP security headers.",
+            example = "75"
+    )
     private int score;
+
+    @Schema(
+            description = "Letter grade assigned to the overall security score.",
+            example = "C"
+    )
     private String grade;
+
+    @Schema(
+            description = "Number of security headers classified as GOOD",
+            example = "4"
+    )
     private int goodHeaders;
+
+    @Schema(
+            description = "Number of security headers classified as WARNING.",
+            example = "1"
+    )
     private int warningHeaders;
+
+    @Schema(
+            description = "Number of security headers classified as MISSING.",
+            example = "1"
+    )
     private int missingHeaders;
 
     public SecurityAssessmentResult () {

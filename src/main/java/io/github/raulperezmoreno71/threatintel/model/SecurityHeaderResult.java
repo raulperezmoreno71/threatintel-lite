@@ -1,9 +1,34 @@
 package io.github.raulperezmoreno71.threatintel.model;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(
+        description = "Represents the analysis result of a single security header."
+)
 public class SecurityHeaderResult {
+
+    @Schema(
+            description = "Indicates whether the header is present.",
+            example = "true"
+    )
     private boolean present;
+
+    @Schema(
+            description = "Value of the detected security header.",
+            example = "max-age=31536000; includeSubdomains; preload"
+    )
     private String value;
+
+    @Schema(
+            description = "Security classification assigned to the analyzed header.",
+            example = "GOOD"
+    )
     private SecurityStatus status;
+
+    @Schema(
+            description = "Recommendation to improve the security configuration when applicable.",
+            example = "Avoid using 'unsafe-inline'. Use nonces or hashes for required inline scripts and styles."
+    )
     private String recommendation;
 
     public SecurityHeaderResult () {
