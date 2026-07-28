@@ -1,31 +1,26 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
-import io.github.raulperezmoreno71.threatintel.dto.AnalyzeRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
-class AnalyzeServiceTest {
+class UrlValidatorTest {
 
-    private AnalyzeService analyzeService;
+    private UrlValidator urlValidator;
 
     @BeforeEach
     void setUp() {
-        analyzeService = new AnalyzeService();
+        urlValidator = new UrlValidator();
     }
 
     @Test
     void shouldThrowIllegalArgumentExceptionWhenUrlIsNull() {
-        AnalyzeRequest request = new AnalyzeRequest();
-        request.setUrl(null);
-
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> analyzeService.analyze(request)
+                () -> urlValidator.validate(null)
         );
 
         assertEquals(
@@ -36,12 +31,9 @@ class AnalyzeServiceTest {
 
     @Test
     void shouldThrowIllegalArgumentExceptionWhenUrlIsBlank() {
-        AnalyzeRequest request = new AnalyzeRequest();
-        request.setUrl("   ");
-
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> analyzeService.analyze(request)
+                () -> urlValidator.validate("   ")
         );
 
         assertEquals(
@@ -50,7 +42,7 @@ class AnalyzeServiceTest {
         );
     }
 
-    @ParameterizedTest
+    @ParameterizedTest(name = "[{index}] url={0}")
     @CsvSource({
             "ftp://github.com, URL protocol must be HTTP or HTTPS",
             "https:test, URL must contain a valid host",
@@ -58,17 +50,26 @@ class AnalyzeServiceTest {
             "github.com, URL protocol must be HTTP or HTTPS"
     })
     void shouldThrowIllegalArgumentExceptionForInvalidUrls (String url, String expectedMessage) {
-        AnalyzeRequest request = new AnalyzeRequest();
-        request.setUrl(url);
-
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> analyzeService.analyze(request)
+                () -> urlValidator.validate(url)
         );
 
         assertEquals(
                 expectedMessage,
                 exception.getMessage()
+        );
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "http://github.com",
+            "https://github.com",
+            "HTTPS://github.com"
+    })
+    void shouldAcceptValidHttpAndHttpsUrls (String url) {
+        assertDoesNotThrow(
+                () -> urlValidator.validate(url)
         );
     }
 }
