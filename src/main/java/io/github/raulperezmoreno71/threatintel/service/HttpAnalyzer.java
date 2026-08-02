@@ -20,8 +20,16 @@ public class HttpAnalyzer {
 
     private final HttpClient httpClient;
 
-    public HttpAnalyzer () {
-        this.httpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).build();
+    public HttpAnalyzer (HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
+
+    public HttpAnalyzer() {
+        this(
+                HttpClient.newBuilder()
+                        .followRedirects(HttpClient.Redirect.NEVER)
+                        .build()
+        );
     }
 
     public HttpRedirectResult followRedirects(String url) {

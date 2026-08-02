@@ -13,6 +13,7 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
@@ -21,6 +22,21 @@ import java.time.temporal.ChronoUnit;
 public class SslAnalyzer {
 
     private static final int SSL_TIMEOUT_MS = 5000;
+
+    private final SSLSocketFactory socketFactory;
+    private final Clock clock;
+
+    public SslAnalyzer(SSLSocketFactory socketFactory, Clock clock) {
+        this.socketFactory = socketFactory;
+        this.clock = clock;
+    }
+
+    public SslAnalyzer() {
+        this(
+                (SSLSocketFactory) SSLSocketFactory.getDefault(),
+                Clock.systemUTC()
+        );
+    }
 
     public SslAnalysisResult analyze (String url, String host) {
         URI uri = URI.create(url);
@@ -35,8 +51,6 @@ public class SslAnalyzer {
         } else {
             port = uri.getPort();
         }
-
-        SSLSocketFactory socketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
 
         try (SSLSocket sslSocket = (SSLSocket) socketFactory.createSocket()) {
 
@@ -60,7 +74,7 @@ public class SslAnalyzer {
 
             LocalDate validUntil = certificate.getNotAfter().toInstant().atZone(ZoneOffset.UTC).toLocalDate();
 
-            long daysUntilExpiration = ChronoUnit.DAYS.between(LocalDate.now(ZoneOffset.UTC), validUntil);
+            long daysUntilExpiration = ChronoUnit.DAYS.between(LocalDate.now(clock), validUntil);
 
             SslStatus status;
             String recommendation;
