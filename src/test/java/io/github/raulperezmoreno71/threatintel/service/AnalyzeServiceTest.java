@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.*;
 
-public class AnalyzeServiceTest {
+class AnalyzeServiceTest {
 
     private UrlValidator urlValidator;
     private SslAnalyzer sslAnalyzer;
