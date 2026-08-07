@@ -107,6 +107,7 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
  - **Version Control:** Git
  - **Repository Hosting:** GitHub
  - **API Documentation:** SpringDoc OpenAPI (Swagger UI)
+ - **Testing:** JUnit 5, Mockito, Spring MockMvc
 
 ## Project Structure
 
@@ -322,6 +323,23 @@ using the following JSON body:
 }
 ```
 
+## Testing
+
+The project includes automated tests covering the main analysis components and the web layer.
+
+The test suite includes:
+
+ - Unit test for URL validations, DNS resolution, HTTP analysis, SSL/TLS analysis, security header evaluation and security score calculation.
+ - Mock-based tests to isolate external network dependencies.
+ - Web layer tests using Spring MockMvc to verify the `/api/analyze` endpoint.
+ - Error response tests for invalid requests, malformed JSON and internal analysis failures.
+
+Run the complete test suite using the Maven Wrapper:
+
+```bash
+./mvnw test
+```
+
 ## Roadmap
 
 The project is being developed incrementally, with each milestone focused on learning and implementing a specific backend or networking concept.
@@ -342,11 +360,13 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] Overall security score calculation
  - [x] Overall security grade assignment
  - [x] REST API documentation (OpenAPI / Swagger)
+ - [x] Unit tests for analysis components
+ - [x] Web layer test with Spring MockMvn
+ - [x] Domain-specific exception handling
 
 ### Planned
 
  - [ ] Configurable security scoring policy
- - [ ] Unit and integration tests
  - [ ] Docker support
  - [ ] Authentication and user accounts
  - [ ] Persistent analysis history
