@@ -1,5 +1,7 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
+import io.github.raulperezmoreno71.threatintel.exception.HttpRequestException;
+import io.github.raulperezmoreno71.threatintel.exception.TooManyRedirectsException;
 import io.github.raulperezmoreno71.threatintel.model.HttpAnalysisResult;
 import io.github.raulperezmoreno71.threatintel.model.HttpRedirectResult;
 import io.github.raulperezmoreno71.threatintel.model.RedirectStep;
@@ -203,7 +205,7 @@ class HttpAnalyzerTest {
     }
 
     @Test
-    void shouldThrowRuntimeExceptionWhenHttpRequestFails() throws Exception {
+    void shouldThrowHttpRequestExceptionWhenHttpRequestFails() throws Exception {
         IOException cause = new IOException("Connection failed");
 
         when(
@@ -213,8 +215,8 @@ class HttpAnalyzerTest {
                 )
         ).thenThrow(cause);
 
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
+        HttpRequestException exception = assertThrows(
+                HttpRequestException.class,
                 () -> httpAnalyzer.followRedirects(
                         "http://example.com"
                 )
@@ -283,7 +285,7 @@ class HttpAnalyzerTest {
     }
 
     @Test
-    void shouldThrowRuntimeExceptionWhenMaximumRedirectsAreExceeded() throws Exception {
+    void shouldThrowTooManyRedirectsExceptionWhenMaximumRedirectsAreExceeded() throws Exception {
         HttpResponse<String> redirectResponse = mock(HttpResponse.class);
 
         HttpHeaders redirectHeaders = HttpHeaders.of(
@@ -304,8 +306,8 @@ class HttpAnalyzerTest {
                 )
         ).thenReturn(redirectResponse);
 
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
+        TooManyRedirectsException exception = assertThrows(
+                TooManyRedirectsException.class,
                 () -> httpAnalyzer.followRedirects("https://example.com/start")
         );
 

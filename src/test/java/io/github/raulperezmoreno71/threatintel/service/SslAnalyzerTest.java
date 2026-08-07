@@ -1,5 +1,8 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
+import io.github.raulperezmoreno71.threatintel.exception.SslAnalysisException;
+import io.github.raulperezmoreno71.threatintel.exception.SslHandshakeAnalysisException;
+import io.github.raulperezmoreno71.threatintel.exception.SslTimeoutException;
 import io.github.raulperezmoreno71.threatintel.model.SslAnalysisResult;
 import io.github.raulperezmoreno71.threatintel.model.SslStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -106,7 +109,7 @@ class SslAnalyzerTest {
     }
 
     @Test
-    void shouldThrowRuntimeExceptionWhenSslOperationTimesOut() throws Exception {
+    void shouldThrowSslTimeoutExceptionWhenSslOperationTimesOut() throws Exception {
         SocketTimeoutException cause = new SocketTimeoutException("Connection timed out");
 
         doThrow(cause).when(sslSocket).connect(
@@ -114,8 +117,8 @@ class SslAnalyzerTest {
                 anyInt()
         );
 
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
+        SslTimeoutException exception = assertThrows(
+                SslTimeoutException.class,
                 () -> sslAnalyzer.analyze(
                         TEST_URL,
                         TEST_HOST
@@ -128,13 +131,13 @@ class SslAnalyzerTest {
     }
 
     @Test
-    void shouldThrowRuntimeExceptionWhenHandshakeFails() throws Exception {
+    void shouldThrowSslHandshakeAnalysisExceptionWhenHandshakeFails() throws Exception {
         SSLHandshakeException cause = new SSLHandshakeException("Handshake failed");
 
         doThrow(cause).when(sslSocket).startHandshake();
 
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
+        SslHandshakeAnalysisException exception = assertThrows(
+                SslHandshakeAnalysisException.class,
                 () -> sslAnalyzer.analyze(
                         TEST_URL,
                         TEST_HOST
@@ -147,13 +150,13 @@ class SslAnalyzerTest {
     }
 
     @Test
-    void shouldThrowRuntimeExceptionWhenGettingTheCertificates() throws Exception {
+    void shouldThrowSslAnalysisExceptionWhenGettingTheCertificates() throws Exception {
         IllegalStateException cause = new IllegalStateException("Could not analyze SSL certificate");
 
         when(sslSession.getPeerCertificates()).thenThrow(cause);
 
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
+        SslAnalysisException exception = assertThrows(
+                SslAnalysisException.class,
                 () -> sslAnalyzer.analyze(
                         TEST_URL,
                         TEST_HOST

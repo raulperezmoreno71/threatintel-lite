@@ -1,5 +1,6 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
+import io.github.raulperezmoreno71.threatintel.exception.DnsResolutionException;
 import io.github.raulperezmoreno71.threatintel.model.DnsAnalysisResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,8 +29,8 @@ class DnsAnalyzerTest {
 
     @Test
     void shouldThrowExceptionWhenDomainCannotBeResolved() {
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
+        DnsResolutionException exception = assertThrows(
+                DnsResolutionException.class,
                 () -> dnsAnalyzer.analyze("domain-that-does-not-exist.invalid")
         );
 

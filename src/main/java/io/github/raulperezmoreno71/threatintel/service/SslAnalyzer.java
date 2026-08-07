@@ -1,5 +1,8 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
+import io.github.raulperezmoreno71.threatintel.exception.SslAnalysisException;
+import io.github.raulperezmoreno71.threatintel.exception.SslHandshakeAnalysisException;
+import io.github.raulperezmoreno71.threatintel.exception.SslTimeoutException;
 import io.github.raulperezmoreno71.threatintel.model.SslAnalysisResult;
 import io.github.raulperezmoreno71.threatintel.model.SslStatus;
 import org.springframework.stereotype.Component;
@@ -105,15 +108,15 @@ public class SslAnalyzer {
 
         } catch (SocketTimeoutException e) {
 
-            throw new RuntimeException("SSL operation timed out", e);
+            throw new SslTimeoutException("SSL operation timed out", e);
 
         } catch (SSLHandshakeException e) {
 
-            throw new RuntimeException("SSL handshake failed", e);
+            throw new SslHandshakeAnalysisException("SSL handshake failed", e);
 
         } catch (Exception e) {
 
-            throw new RuntimeException("Could not analyze SSL certificate", e);
+            throw new SslAnalysisException("Could not analyze SSL certificate", e);
 
         }
     }

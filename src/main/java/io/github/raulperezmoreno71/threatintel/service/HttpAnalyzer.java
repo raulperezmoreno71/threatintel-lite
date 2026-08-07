@@ -1,5 +1,7 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
+import io.github.raulperezmoreno71.threatintel.exception.HttpRequestException;
+import io.github.raulperezmoreno71.threatintel.exception.TooManyRedirectsException;
 import io.github.raulperezmoreno71.threatintel.model.HttpAnalysisResult;
 import io.github.raulperezmoreno71.threatintel.model.HttpRedirectResult;
 import io.github.raulperezmoreno71.threatintel.model.HttpRequestResult;
@@ -63,7 +65,7 @@ public class HttpAnalyzer {
             }
 
             if (redirectCount == MAX_REDIRECTS) {
-                throw new RuntimeException("Maximum number of redirects exceeded");
+                throw new TooManyRedirectsException("Maximum number of redirects exceeded");
             }
 
             currentUrl = URI.create(currentUrl).resolve(location).toString();
@@ -128,7 +130,7 @@ public class HttpAnalyzer {
             return new HttpRequestResult(response, responseTime);
 
         } catch (Exception e) {
-            throw new RuntimeException("Could not send HTTP request", e);
+            throw new HttpRequestException("Could not send HTTP request", e);
         }
     }
 }

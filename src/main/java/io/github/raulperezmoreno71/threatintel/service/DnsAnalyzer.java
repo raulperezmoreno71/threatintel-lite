@@ -1,5 +1,6 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
+import io.github.raulperezmoreno71.threatintel.exception.DnsResolutionException;
 import io.github.raulperezmoreno71.threatintel.model.DnsAnalysisResult;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +24,7 @@ public class DnsAnalyzer {
             return new DnsAnalysisResult(ips);
 
         } catch (UnknownHostException e) {
-            throw new RuntimeException("Could not resolve domain IP addresses", e);
+            throw new DnsResolutionException("Could not resolve domain IP addresses", e);
         }
     }
 }
