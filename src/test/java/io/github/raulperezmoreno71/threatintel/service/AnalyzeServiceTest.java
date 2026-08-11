@@ -2,7 +2,9 @@ package io.github.raulperezmoreno71.threatintel.service;
 
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeRequest;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeResponse;
+import io.github.raulperezmoreno71.threatintel.entity.Analysis;
 import io.github.raulperezmoreno71.threatintel.model.*;
+import io.github.raulperezmoreno71.threatintel.repository.AnalysisRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -20,6 +22,7 @@ class AnalyzeServiceTest {
     private SecurityAssessmentCalculator securityAssessmentCalculator;
     private HttpAnalyzer httpAnalyzer;
     private DnsAnalyzer dnsAnalyzer;
+    private AnalysisRepository analysisRepository;
 
     private AnalyzeService analyzeService;
 
@@ -31,6 +34,7 @@ class AnalyzeServiceTest {
         securityAssessmentCalculator = mock(SecurityAssessmentCalculator.class);
         httpAnalyzer = mock(HttpAnalyzer.class);
         dnsAnalyzer = mock(DnsAnalyzer.class);
+        analysisRepository = mock(AnalysisRepository.class);
 
         analyzeService = new AnalyzeService(
                 urlValidator,
@@ -38,7 +42,8 @@ class AnalyzeServiceTest {
                 httpAnalyzer,
                 sslAnalyzer,
                 securityHeadersAnalyzer,
-                securityAssessmentCalculator
+                securityAssessmentCalculator,
+                analysisRepository
         );
     }
 
@@ -51,6 +56,7 @@ class AnalyzeServiceTest {
         SecurityHeadersAnalysisResult securityHeadersAnalysisResult = mock(SecurityHeadersAnalysisResult.class);
         SecurityAssessmentResult securityAssessmentResult = mock(SecurityAssessmentResult.class);
         HttpResponse<String> finalResponse = mock(HttpResponse.class);
+        SecurityHeaderResult securityHeaderResult = mock(SecurityHeaderResult.class);
 
         when(dnsAnalyzer.analyze("example.com")).thenReturn(dnsAnalysisResult);
         when(httpAnalyzer.followRedirects("https://example.com")).thenReturn(httpRedirectResult);
@@ -64,6 +70,13 @@ class AnalyzeServiceTest {
         ).thenReturn(sslAnalysisResult);
         when(securityHeadersAnalyzer.analyze(finalResponse)).thenReturn(securityHeadersAnalysisResult);
         when(securityAssessmentCalculator.calculate(securityHeadersAnalysisResult)).thenReturn(securityAssessmentResult);
+
+        when(securityHeadersAnalysisResult.getContentSecurityPolicy()).thenReturn(securityHeaderResult);
+        when(securityHeadersAnalysisResult.getPermissionsPolicy()).thenReturn(securityHeaderResult);
+        when(securityHeadersAnalysisResult.getReferrerPolicy()).thenReturn(securityHeaderResult);
+        when(securityHeadersAnalysisResult.getStrictTransportSecurity()).thenReturn(securityHeaderResult);
+        when(securityHeadersAnalysisResult.getXContentTypeOptions()).thenReturn(securityHeaderResult);
+        when(securityHeadersAnalysisResult.getXFrameOptions()).thenReturn(securityHeaderResult);
 
         AnalyzeRequest request = new AnalyzeRequest("https://example.com");
 
@@ -97,5 +110,6 @@ class AnalyzeServiceTest {
                 securityHeadersAnalyzer,
                 securityAssessmentCalculator
         );
+        verify(analysisRepository).save(any(Analysis.class));
     }
 }
