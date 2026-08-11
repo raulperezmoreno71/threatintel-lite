@@ -1,8 +1,12 @@
 # ThreatIntel Lite
 
+![Tests](https://github.com/raulperezmoreno71/threatintel-lite/actions/workflows/tests.yml/badge.svg)
+
 ## Overview
 
 ThreatIntel Lite is a REST API built with Spring Boot that analyzes different aspects of a URL and evaluates its HTTP security configuration. The results are grouped into dedicated analysis modules, including DNS resolution, HTTP behavior, SSL/TLS certificate information and HTTP security header assessment.
+
+Analysis results are also persisted in a PostgreSQL database using Spring Data JPA and Hibernate, allowing previous analyses to be stored for future retrieval.
 
 The project is designed to explore how backend applications interact with Internet protocols such as DNS and HTTP while following clean architecture principles and modern Java development practices. 
 
@@ -18,10 +22,10 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
                 User Request
                      │
                      ▼
-              URL Validation
+               URL Validation
                      │
                      ▼
-            Domain Extraction
+             Domain Extraction
                      │
                      ▼
 ┌──────────────────────────────────────────────┐
@@ -48,8 +52,8 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
 │      └── Renewal recommendation              │
 │                                              │
 │  Security Headers Assessment                 │
-│      ├── HSTS                                │
-│      ├── CSP                                 │
+│      ├── Strict-Transport-Security           │
+│      ├── Content-Security-Policy             │
 │      ├── X-Frame-Options                     │
 │      ├── X-Content-Type-Options              │
 │      ├── Referrer-Policy                     │
@@ -63,7 +67,21 @@ ThreatIntel Lite is being developed incrementally, with each feature focusing on
 └──────────────────────────────────────────────┘
                      │
                      ▼
-          Structured JSON Response
+               Analysis Results
+                     │
+          ┌──────────┴──────────┐
+          │                     │
+          ▼                     ▼
+   JPA Entity Mapping     Structured JSON
+          │                  Response
+          ▼
+   Spring Data JPA
+          │
+          ▼
+      Hibernate
+          │
+          ▼
+      PostgreSQL
 ```
 
 ThreatIntel Lite processes each URL through independent analysis modules and combines their results into a single structured JSON response.
@@ -96,11 +114,16 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
  - [x] Follow a clean layered architecture (Controller, Service, DTO and Exception Handler).
  - [x] Interactive API documentation with swagger UI.
  - [x] OpenAPI 3 specification generation.
+ - [x] Persist complete URL analysis results using PostgreSQL.
+ - [x] Map analysis data to relational entities using Spring Data JPA and Hibernate.
+ - [x] Model one-to-one and one-to-many relationships between analysis modules.
 
 ## Tech Stack
 
  - **Language:** Java 21
  - **Framework:** Spring Boot
+ - **Persistence:** Spring Data JPA, Hibernate
+ - **Database:** PostgreSQL
  - **Build Tool:** Maven
  - **Networking:** Java HttpClient, JSSE (SSL/TLS)
  - **JSON Serialization:** Jackson
@@ -108,6 +131,7 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
  - **Repository Hosting:** GitHub
  - **API Documentation:** SpringDoc OpenAPI (Swagger UI)
  - **Testing:** JUnit 5, Mockito, Spring MockMvc
+ - **CI:** GitHub Actions
 
 ## Project Structure
 
@@ -118,8 +142,10 @@ src
         └── io.github.raulperezmoreno71.threatintel
             ├── controller
             ├── dto
+            ├── entity
             ├── exception
             ├── model
+            ├── repository
             └── service
 ```
 
@@ -129,7 +155,7 @@ Receives incoming HTTP requests, delegates the processing to the service layer a
 
 ### `service`
 
-Contains the application's business logic, including URL validation, DNS resolution and HTTP analysis.
+Contains the application's business logic and coordinates URL validation, analysis modules and persistence of analysis results.
 
 ### `dto`
 
@@ -144,6 +170,29 @@ Contains internal domain models representing the results of each analysis module
 Provides centralized exception handling and returns consistent error responses.
 
 The project follows a layered architecture, keeping responsibilities separated to improve readability, maintainability and scalability.
+
+### `entity`
+
+Defines the JPA entities used to persist analysis results and their relationship in PostgreSQL.
+
+### `repository`
+
+Provides database access through Spring Data JPA repositories.
+
+## Persistence
+
+ThreatIntel Lite persists completed analyses in PostgreSQL using Spring Data JPA and Hibernate.
+
+The persistence model includes:
+
+- General analysis information
+- DNS analysis and resolved IP addresses
+- HTTP analysis and redirect chain
+- SSL/TLS certificate analysis
+- Security header analysis
+- Overall security assessment
+
+Relationships between entities are modeled using JPA associations such as `@OneToOne`, `@OneToMany` and `@ManyToOne`.
 
 ## API example
 
@@ -277,7 +326,7 @@ Content-Type: application/json
 Before running the project, make sure you have installed:
 
  - Java 21
- - Maven
+ - PostgreSQL
  - Git
 
 ### Clone the repository
@@ -287,10 +336,34 @@ git clone https://github.com/raulperezmoreno71/threatintel-lite.git
 cd threatintel-lite
 ```
 
+### Database setup
+
+Create a PostgreSQL database named:
+
+```text
+threatintel
+```
+
+Configure the following environment variables:
+
+```text
+DB_URL=jdbc:postgresql://localhost:5432/threatintel
+DB_USERNAME=postgres
+DB_PASSWORD=your_postgresql_password
+```
+
 ### Run the application
 
+Linux / macOS:
+
 ```bash
-mvn spring-boot:run
+./mvnw spring-boot:run
+```
+
+Windows:
+
+```bash
+.\mvnw.cmd spring-boot:run
 ```
 
 By default, the application will start on:
@@ -301,7 +374,7 @@ http://localhost:8080
 
 ### OpenAPI Documentation
 
-Once the application is running, the interactive API documentation is avaliable at:
+Once the application is running, the interactive API documentation is available at:
 
 ```text
 http://localhost:8080/swagger-ui/index.html
@@ -363,13 +436,17 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] Unit tests for analysis components
  - [x] Web layer test with Spring MockMvn
  - [x] Domain-specific exception handling
+ - [x] PostgreSQL persistence
+ - [x] JPA/Hibernate entity mapping
+ - [x] Persistent storage of complete analysis results
+ - [x] GitHub Actions continuous integration
 
 ### Planned
 
+ - [ ] Rest endpoints for retrieving stored analyses
  - [ ] Configurable security scoring policy
  - [ ] Docker support
  - [ ] Authentication and user accounts
- - [ ] Persistent analysis history
  - [ ] Domain reputation analysis using external services
 
 ## Author
