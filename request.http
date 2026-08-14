@@ -4,3 +4,7 @@ Content-Type: application/json
 {
   "url": "https://google.com"
 }
+
+###
+
+GET http://localhost:8080/api/analyses
