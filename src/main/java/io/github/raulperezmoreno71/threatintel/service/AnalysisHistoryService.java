@@ -21,8 +21,16 @@ public class AnalysisHistoryService {
         this.analysisRepository = analysisRepository;
     }
 
-    public List<Analysis> getAllAnalyses() {
-        return analysisRepository.findAll();
+    public List<AnalysisHistoryResponse> getAllAnalyses() {
+        List<Analysis> analyses = analysisRepository.findAll();
+
+        List<AnalysisHistoryResponse> responses = new ArrayList<>();
+
+        for(Analysis analysis : analyses) {
+            responses.add(mapToResponse(analysis));
+        }
+
+        return responses;
     }
 
     public AnalysisHistoryResponse getAnalysisById(Long id) {
@@ -31,31 +39,46 @@ public class AnalysisHistoryService {
         return mapToResponse(analysis);
     }
 
+    public void deleteAnalysisById(Long id) {
+        Analysis analysis = analysisRepository.findById(id).orElseThrow(() -> new AnalysisNotFoundException(id));
+
+        analysisRepository.delete(analysis);
+    }
+
     private AnalysisHistoryResponse mapToResponse(Analysis analysis) {
-        DnsAnalysisResult dns = new DnsAnalysisResult(analysis.getDnsAnalysis().getIps());
 
-        List<RedirectStep> redirectChain = new ArrayList<>();
+        DnsAnalysisResult dns = null;
 
-        for(RedirectStepEntity step : analysis.getHttpAnalysis().getRedirectChain()) {
-            RedirectStep redirectStep = new RedirectStep(
-                    step.getUrl(),
-                    step.getStatusCode(),
-                    step.getLocation(),
-                    step.getResponseTimeMs()
-            );
-
-            redirectChain.add(redirectStep);
+        if (analysis.getDnsAnalysis() != null) {
+            dns = new DnsAnalysisResult(analysis.getDnsAnalysis().getIps());
         }
 
-        HttpAnalysisResult http = new HttpAnalysisResult(
-                analysis.getHttpAnalysis().getStatusCode(),
-                analysis.getHttpAnalysis().getContentType(),
-                analysis.getHttpAnalysis().getServer(),
-                analysis.getHttpAnalysis().getContentLength(),
-                analysis.getHttpAnalysis().getFinalUrl(),
-                analysis.getHttpAnalysis().getTotalResponseTimeMs(),
-                redirectChain
-        );
+        HttpAnalysisResult http = null;
+
+        if (analysis.getHttpAnalysis() != null) {
+            List<RedirectStep> redirectChain = new ArrayList<>();
+
+            for (RedirectStepEntity step : analysis.getHttpAnalysis().getRedirectChain()) {
+                RedirectStep redirectStep = new RedirectStep(
+                        step.getUrl(),
+                        step.getStatusCode(),
+                        step.getLocation(),
+                        step.getResponseTimeMs()
+                );
+
+                redirectChain.add(redirectStep);
+            }
+
+            http = new HttpAnalysisResult(
+                    analysis.getHttpAnalysis().getStatusCode(),
+                    analysis.getHttpAnalysis().getContentType(),
+                    analysis.getHttpAnalysis().getServer(),
+                    analysis.getHttpAnalysis().getContentLength(),
+                    analysis.getHttpAnalysis().getFinalUrl(),
+                    analysis.getHttpAnalysis().getTotalResponseTimeMs(),
+                    redirectChain
+            );
+        }
 
         SslAnalysisResult ssl = null;
 
@@ -71,44 +94,50 @@ public class AnalysisHistoryService {
             );
         }
 
-        SecurityHeadersAnalysisResult securityHeadersAnalysisResult = new SecurityHeadersAnalysisResult();
+        SecurityHeadersAnalysisResult securityHeadersAnalysisResult = null;
 
-        for(SecurityHeaderResultEntity header : analysis.getSecurityHeadersAnalysis().getHeaders()) {
-            SecurityHeaderResult securityHeaderResult = new SecurityHeaderResult(
-                    header.isPresent(),
-                    header.getValue(),
-                    header.getStatus(),
-                    header.getRecommendation()
-            );
+        if (analysis.getSecurityHeadersAnalysis() != null) {
+            securityHeadersAnalysisResult = new SecurityHeadersAnalysisResult();
 
-            switch (header.getHeaderName()) {
-                case "Strict-Transport-Security" ->
-                    securityHeadersAnalysisResult.setStrictTransportSecurity(securityHeaderResult);
+            for (SecurityHeaderResultEntity header : analysis.getSecurityHeadersAnalysis().getHeaders()) {
+                SecurityHeaderResult securityHeaderResult = new SecurityHeaderResult(
+                        header.isPresent(),
+                        header.getValue(),
+                        header.getStatus(),
+                        header.getRecommendation()
+                );
 
-                case "Content-Security-Policy" ->
-                    securityHeadersAnalysisResult.setContentSecurityPolicy(securityHeaderResult);
+                switch (header.getHeaderName()) {
+                    case "Strict-Transport-Security" ->
+                            securityHeadersAnalysisResult.setStrictTransportSecurity(securityHeaderResult);
 
-                case "X-Frame-Options" ->
-                    securityHeadersAnalysisResult.setXFrameOptions(securityHeaderResult);
+                    case "Content-Security-Policy" ->
+                            securityHeadersAnalysisResult.setContentSecurityPolicy(securityHeaderResult);
 
-                case "X-Content-Type-Options" ->
-                    securityHeadersAnalysisResult.setXContentTypeOptions(securityHeaderResult);
+                    case "X-Frame-Options" -> securityHeadersAnalysisResult.setXFrameOptions(securityHeaderResult);
 
-                case "Referrer-Policy" ->
-                    securityHeadersAnalysisResult.setReferrerPolicy(securityHeaderResult);
+                    case "X-Content-Type-Options" ->
+                            securityHeadersAnalysisResult.setXContentTypeOptions(securityHeaderResult);
 
-                case "Permissions-Policy" ->
-                    securityHeadersAnalysisResult.setPermissionsPolicy(securityHeaderResult);
+                    case "Referrer-Policy" -> securityHeadersAnalysisResult.setReferrerPolicy(securityHeaderResult);
+
+                    case "Permissions-Policy" ->
+                            securityHeadersAnalysisResult.setPermissionsPolicy(securityHeaderResult);
+                }
             }
         }
 
-        SecurityAssessmentResult securityAssessmentResult = new SecurityAssessmentResult(
-                analysis.getSecurityAssessmentAnalysis().getScore(),
-                analysis.getSecurityAssessmentAnalysis().getGrade(),
-                analysis.getSecurityAssessmentAnalysis().getGoodHeaders(),
-                analysis.getSecurityAssessmentAnalysis().getWarningHeaders(),
-                analysis.getSecurityAssessmentAnalysis().getMissingHeaders()
-        );
+        SecurityAssessmentResult securityAssessmentResult = null;
+
+        if (analysis.getSecurityAssessmentAnalysis() != null) {
+            securityAssessmentResult = new SecurityAssessmentResult(
+                    analysis.getSecurityAssessmentAnalysis().getScore(),
+                    analysis.getSecurityAssessmentAnalysis().getGrade(),
+                    analysis.getSecurityAssessmentAnalysis().getGoodHeaders(),
+                    analysis.getSecurityAssessmentAnalysis().getWarningHeaders(),
+                    analysis.getSecurityAssessmentAnalysis().getMissingHeaders()
+            );
+        }
 
         return new AnalysisHistoryResponse(
                 analysis.getId(),

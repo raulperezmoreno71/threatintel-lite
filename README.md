@@ -118,6 +118,8 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
  - [x] Map analysis data to relational entities using Spring Data JPA and Hibernate.
  - [x] Model one-to-one and one-to-many relationships between analysis modules.
  - [x] Retrieve persisted analyses by ID.
+ - [x] Retrieve all persisted analyses.
+ - [x] Delete persisted analyses by ID.
  - [x] Map persisted JPA entities to structured API responses.
 
 ## Tech Stack
@@ -321,6 +323,26 @@ Content-Type: application/json
 }
 ```
 
+## Analysis History API
+
+Retrieve all stored analyses:
+
+```http
+GET /api/analyses
+```
+
+Retrieve a stored analysis by ID:
+
+```http
+GET /api/analyses/{id}
+```
+
+Delete a stored analysis:
+
+```http
+DELETE /api/analyses/{id}
+```
+
 ## Getting Started
 
 ### Prerequisites
@@ -443,10 +465,11 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] Persistent storage of complete analysis results
  - [x] GitHub Actions continuous integration
  - [x] Retrieve stored analysis by ID.
+ - [x] Analysis history retrieval.
+ - [x] Analysis history deletion.
 
 ### Planned
 
- - [ ] Retrieve all stored analysis
  - [ ] Configurable security scoring policy
  - [ ] Docker support
  - [ ] Authentication and user accounts
