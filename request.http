@@ -7,4 +7,4 @@ Content-Type: application/json
 
 ###
 
-GET http://localhost:8080/api/analyses
+GET http://localhost:8080/api/analyses/10

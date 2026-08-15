@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import io.github.raulperezmoreno71.threatintel.model.*;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @JsonPropertyOrder({

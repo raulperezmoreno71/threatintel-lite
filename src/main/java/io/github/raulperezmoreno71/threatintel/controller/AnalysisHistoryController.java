@@ -1,5 +1,6 @@
 package io.github.raulperezmoreno71.threatintel.controller;
 
+import io.github.raulperezmoreno71.threatintel.dto.AnalysisHistoryResponse;
 import io.github.raulperezmoreno71.threatintel.entity.Analysis;
 import io.github.raulperezmoreno71.threatintel.service.AnalysisHistoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -64,7 +65,7 @@ public class AnalysisHistoryController {
             )
     })
     @GetMapping("/{id}")
-    public Analysis getAnalysisById(@PathVariable Long id) {
+    public AnalysisHistoryResponse getAnalysisById(@PathVariable Long id) {
         return analysisHistoryService.getAnalysisById(id);
     }
 }

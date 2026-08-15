@@ -117,6 +117,8 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
  - [x] Persist complete URL analysis results using PostgreSQL.
  - [x] Map analysis data to relational entities using Spring Data JPA and Hibernate.
  - [x] Model one-to-one and one-to-many relationships between analysis modules.
+ - [x] Retrieve persisted analyses by ID.
+ - [x] Map persisted JPA entities to structured API responses.
 
 ## Tech Stack
 
@@ -440,10 +442,11 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] JPA/Hibernate entity mapping
  - [x] Persistent storage of complete analysis results
  - [x] GitHub Actions continuous integration
+ - [x] Retrieve stored analysis by ID.
 
 ### Planned
 
- - [ ] Rest endpoints for retrieving stored analyses
+ - [ ] Retrieve all stored analysis
  - [ ] Configurable security scoring policy
  - [ ] Docker support
  - [ ] Authentication and user accounts
