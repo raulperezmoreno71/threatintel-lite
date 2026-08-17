@@ -18,5 +18,8 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Check Docker
+        run: docker info
+
       - name: Run tests
         run: ./mvnw test

@@ -134,7 +134,8 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
  - **Version Control:** Git
  - **Repository Hosting:** GitHub
  - **API Documentation:** SpringDoc OpenAPI (Swagger UI)
- - **Testing:** JUnit 5, Mockito, Spring MockMvc
+ - **Testing:** JUnit 5, Mockito, Spring MockMvc, TestContainers
+ - **Containerization:** Docker
  - **CI:** GitHub Actions
 
 ## Project Structure
@@ -352,6 +353,7 @@ Before running the project, make sure you have installed:
  - Java 21
  - PostgreSQL
  - Git
+ - Docker Desktop (required for Testcontainers integration tests)
 
 ### Clone the repository
 
@@ -422,20 +424,30 @@ using the following JSON body:
 
 ## Testing
 
-The project includes automated tests covering the main analysis components and the web layer.
+The project includes automated tests covering the analysis logic, service layer, web layer and persistence layer.
 
 The test suite includes:
 
- - Unit test for URL validations, DNS resolution, HTTP analysis, SSL/TLS analysis, security header evaluation and security score calculation.
- - Mock-based tests to isolate external network dependencies.
- - Web layer tests using Spring MockMvc to verify the `/api/analyze` endpoint.
- - Error response tests for invalid requests, malformed JSON and internal analysis failures.
+- Unit tests for URL validation, DNS resolution, HTTP analysis, SSL/TLS analysis, security header evaluation and security score calculation.
+- Mock-based service tests using Mockito to isolate repositories and external dependencies.
+- Web layer tests using Spring MockMvc to verify analysis and history endpoints, including error responses.
+- Persistence integration tests using Testcontainers with a real PostgreSQL instance running in Docker.
+- JPA relationship and cascade tests covering DNS analysis, HTTP redirect chains, SSL/TLS data, security headers and security assessment persistence.
+- Cascade deletion tests verifying that related persisted entities are removed together with their parent analysis.
 
 Run the complete test suite using the Maven Wrapper:
 
 ```bash
 ./mvnw test
 ```
+
+On windows:
+
+```bash
+.\mvnw.cmd test
+```
+
+The complete test suite is also executed automatically by GitHub Actions on every push and pull request, including PostgreSQL integration tests powered by Testcontainers.
 
 ## Roadmap
 
@@ -458,7 +470,11 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] Overall security grade assignment
  - [x] REST API documentation (OpenAPI / Swagger)
  - [x] Unit tests for analysis components
- - [x] Web layer test with Spring MockMvn
+ - [x] Service layer tests with Mockito
+ - [x] Web layer tests with Spring MockMvc
+ - [x] PostgreSQL integration tests with Testcontainers
+ - [x] JPA relationship and cascade persistence tests
+ - [x] Cascade deletion integration tests 
  - [x] Domain-specific exception handling
  - [x] PostgreSQL persistence
  - [x] JPA/Hibernate entity mapping
@@ -471,7 +487,7 @@ The project is being developed incrementally, with each milestone focused on lea
 ### Planned
 
  - [ ] Configurable security scoring policy
- - [ ] Docker support
+ - [ ] Dockerized application deployment
  - [ ] Authentication and user accounts
  - [ ] Domain reputation analysis using external services
 
