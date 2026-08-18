@@ -120,7 +120,6 @@ public class AnalyzeService {
                 "URL analyzed successfully",
                 url,
                 domain,
-                LocalDateTime.now(),
                 dnsAnalysis,
                 httpAnalysis,
                 sslAnalysis,

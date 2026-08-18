@@ -3,6 +3,7 @@ package io.github.raulperezmoreno71.threatintel.repository;
 import io.github.raulperezmoreno71.threatintel.entity.*;
 import io.github.raulperezmoreno71.threatintel.model.SecurityStatus;
 import io.github.raulperezmoreno71.threatintel.model.SslStatus;
+import io.github.raulperezmoreno71.threatintel.model.UserStatus;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +17,6 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,6 +39,9 @@ class AnalysisRepositoryIntegrationTest {
     private AnalysisRepository analysisRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private EntityManager entityManager;
 
     @DynamicPropertySource
@@ -50,17 +53,20 @@ class AnalysisRepositoryIntegrationTest {
 
     @Test
     void shouldSaveAndFindAnalysisById() {
+        User user = createAndSaveUser();
+
         Analysis analysis = new Analysis(
                 "URL analyzed successfully",
                 "https://example.com",
                 "example.com",
-                LocalDateTime.of(2026, 8, 17, 13, 0),
                 null,
                 null,
                 null,
                 null,
                 null
         );
+
+        user.addAnalysis(analysis);
 
         Analysis saved = analysisRepository.saveAndFlush(analysis);
 
@@ -75,19 +81,22 @@ class AnalysisRepositoryIntegrationTest {
 
     @Test
     void shouldPersistDnsAnalysisWithIps() {
+        User user = createAndSaveUser();
+
         DnsAnalysis dnsAnalysis = new DnsAnalysis(List.of("93.184.216.34", "93.184.216.35"));
 
         Analysis analysis = new Analysis(
                 "URL analyzed successfully",
                 "https://example.com",
                 "example.com",
-                LocalDateTime.of(2026, 8, 17, 13, 0),
                 dnsAnalysis,
                 null,
                 null,
                 null,
                 null
         );
+
+        user.addAnalysis(analysis);
 
         Analysis saved = analysisRepository.saveAndFlush(analysis);
 
@@ -102,6 +111,8 @@ class AnalysisRepositoryIntegrationTest {
 
     @Test
     void shouldPersistHttpAnalysisWithRedirectChain() {
+        User user = createAndSaveUser();
+
         HttpAnalysis httpAnalysis = new HttpAnalysis(
                 200,
                 "text/html",
@@ -125,13 +136,14 @@ class AnalysisRepositoryIntegrationTest {
                 "URL analyzed successfully",
                 "https://example.com",
                 "example.com",
-                LocalDateTime.of(2026, 8, 17, 13, 0),
                 null,
                 httpAnalysis,
                 null,
                 null,
                 null
         );
+
+        user.addAnalysis(analysis);
 
         Analysis saved = analysisRepository.saveAndFlush(analysis);
 
@@ -148,6 +160,8 @@ class AnalysisRepositoryIntegrationTest {
 
     @Test
     void shouldPersistSslAnalysis() {
+        User user = createAndSaveUser();
+
         SslAnalysis sslAnalysis = new SslAnalysis(
                 "Let's Encrypt",
                 "example.com",
@@ -162,13 +176,14 @@ class AnalysisRepositoryIntegrationTest {
                 "URL analyzed successfully",
                 "https://example.com",
                 "example.com",
-                LocalDateTime.of(2026, 8, 17, 13, 0),
                 null,
                 null,
                 sslAnalysis,
                 null,
                 null
         );
+
+        user.addAnalysis(analysis);
 
         Analysis saved = analysisRepository.saveAndFlush(analysis);
 
@@ -186,6 +201,8 @@ class AnalysisRepositoryIntegrationTest {
 
     @Test
     void shouldPersistSecurityHeadersAnalysis() {
+        User user = createAndSaveUser();
+
         SecurityHeaderResultEntity securityHeaderResultEntity = new SecurityHeaderResultEntity(
                 "Strict-Transport-Security",
                 true,
@@ -202,13 +219,14 @@ class AnalysisRepositoryIntegrationTest {
                 "URL analyzed successfully",
                 "https://example.com",
                 "example.com",
-                LocalDateTime.of(2026, 8, 17, 13, 0),
                 null,
                 null,
                 null,
                 securityHeadersAnalysis,
                 null
         );
+
+        user.addAnalysis(analysis);
 
         Analysis saved = analysisRepository.saveAndFlush(analysis);
 
@@ -225,6 +243,8 @@ class AnalysisRepositoryIntegrationTest {
 
     @Test
     void shouldPersistSecurityAssessment() {
+        User user = createAndSaveUser();
+
         SecurityAssessmentEntity securityAssessmentEntity = new SecurityAssessmentEntity(
                 85,
                 "A",
@@ -237,13 +257,14 @@ class AnalysisRepositoryIntegrationTest {
                 "URL analyzed successfully",
                 "https://example.com",
                 "example.com",
-                LocalDateTime.of(2026, 8, 17, 13, 0),
                 null,
                 null,
                 null,
                 null,
                 securityAssessmentEntity
         );
+
+        user.addAnalysis(analysis);
 
         Analysis saved = analysisRepository.saveAndFlush(analysis);
 
@@ -260,17 +281,20 @@ class AnalysisRepositoryIntegrationTest {
 
     @Test
     void shouldDeleteAnalysis() {
+        User user = createAndSaveUser();
+
         Analysis analysis = new Analysis(
                 "URL analyzed successfully",
                 "https://example.com",
                 "example.com",
-                LocalDateTime.of(2026, 8, 17, 13, 0),
                 null,
                 null,
                 null,
                 null,
                 null
         );
+
+        user.addAnalysis(analysis);
 
         Analysis saves = analysisRepository.saveAndFlush(analysis);
 
@@ -286,6 +310,8 @@ class AnalysisRepositoryIntegrationTest {
 
     @Test
     void shouldDeleteRelatedEntitiesByCascade() {
+        User user = createAndSaveUser();
+
         DnsAnalysis dnsAnalysis = new DnsAnalysis(List.of());
         HttpAnalysis httpAnalysis = new HttpAnalysis();
         RedirectStepEntity redirectStepEntity = new RedirectStepEntity(
@@ -312,13 +338,14 @@ class AnalysisRepositoryIntegrationTest {
                 "URL analyzed successfully",
                 "https://example.com",
                 "example.com",
-                LocalDateTime.of(2026, 8, 17, 13, 0),
                 dnsAnalysis,
                 httpAnalysis,
                 sslAnalysis,
                 securityHeadersAnalysis,
                 securityAssessmentEntity
         );
+
+        user.addAnalysis(analysis);
 
         Analysis saved = analysisRepository.saveAndFlush(analysis);
 
@@ -353,5 +380,15 @@ class AnalysisRepositoryIntegrationTest {
         assertNull(deletedHeader);
         assertNull(deletedHeaders);
         assertNull(deletedAssessment);
+    }
+
+    private User createAndSaveUser() {
+        User user = new User(
+                "raul@example.com",
+                "password",
+                UserStatus.ACTIVE
+        );
+
+        return userRepository.saveAndFlush(user);
     }
 }

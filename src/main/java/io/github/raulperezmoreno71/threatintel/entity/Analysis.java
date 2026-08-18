@@ -12,8 +12,14 @@ public class Analysis {
     private Long id;
 
     private String message;
+
+    @Column(nullable = false)
     private String url;
+
+    @Column(nullable = false)
     private String domain;
+
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @OneToOne(cascade = CascadeType.ALL)
@@ -36,6 +42,15 @@ public class Analysis {
     @JoinColumn(name = "security_assessment_analysis_id")
     private SecurityAssessmentEntity securityAssessmentEntity;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @PrePersist
+    private void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+
     public Analysis() {
 
     }
@@ -44,7 +59,6 @@ public class Analysis {
             String message,
             String url,
             String domain,
-            LocalDateTime createdAt,
             DnsAnalysis dnsAnalysis,
             HttpAnalysis httpAnalysis,
             SslAnalysis sslAnalysis,
@@ -54,7 +68,6 @@ public class Analysis {
         this.message = message;
         this.url = url;
         this.domain = domain;
-        this.createdAt = createdAt;
         this.dnsAnalysis = dnsAnalysis;
         this.httpAnalysis = httpAnalysis;
         this.sslAnalysis = sslAnalysis;
@@ -92,10 +105,6 @@ public class Analysis {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
     }
 
     public DnsAnalysis getDnsAnalysis() {
@@ -136,5 +145,13 @@ public class Analysis {
 
     public void setSecurityAssessmentAnalysis(SecurityAssessmentEntity securityAssessmentEntity) {
         this.securityAssessmentEntity = securityAssessmentEntity;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }
