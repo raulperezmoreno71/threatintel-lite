@@ -39,9 +39,18 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ErrorResponse> handleAnalysisException (RuntimeException exception, HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleRuntimeException (RuntimeException exception, HttpServletRequest request) {
         return buildErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(EmailAlreadyExistException.class)
+    public ResponseEntity<ErrorResponse> handleEmailAlreadyExistException(EmailAlreadyExistException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.CONFLICT,
                 exception.getMessage(),
                 request
         );

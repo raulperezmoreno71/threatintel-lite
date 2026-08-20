@@ -6,7 +6,7 @@
 
 ThreatIntel Lite is a REST API built with Spring Boot that analyzes different aspects of a URL and evaluates its HTTP security configuration. The results are grouped into dedicated analysis modules, including DNS resolution, HTTP behavior, SSL/TLS certificate information and HTTP security header assessment.
 
-Analysis results are also persisted in a PostgreSQL database using Spring Data JPA and Hibernate, allowing previous analyses to be stored for future retrieval.
+Analysis results are also persisted in a PostgreSQL database using Spring Data JPA and Hibernate, allowing previous analyses to be stored for future retrieval. The application also includes user account persistence and a registration flow with secure password hashing using Spring Security.
 
 The project is designed to explore how backend applications interact with Internet protocols such as DNS and HTTP while following clean architecture principles and modern Java development practices. 
 
@@ -121,11 +121,18 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
  - [x] Retrieve all persisted analyses.
  - [x] Delete persisted analyses by ID.
  - [x] Map persisted JPA entities to structured API responses.
+ - [x] Persist user accounts using PostgreSQL.
+ - [x] Associate persisted analyses with users.
+ - [x] Register new users through a dedicated REST endpoint.
+ - [x] Hash user passwords using Spring Security PasswordEncoder.
+ - [x] Prevent duplicate user registration by email.
+ - [x] Return structured 409 Conflict responses for duplicate emails.
 
 ## Tech Stack
 
  - **Language:** Java 21
  - **Framework:** Spring Boot
+ - **Security:** Spring Security, Password Encoder
  - **Persistence:** Spring Data JPA, Hibernate
  - **Database:** PostgreSQL
  - **Build Tool:** Maven
@@ -160,11 +167,11 @@ Receives incoming HTTP requests, delegates the processing to the service layer a
 
 ### `service`
 
-Contains the application's business logic and coordinates URL validation, analysis modules and persistence of analysis results.
+Contains the application's business logic and coordinates URL validation, analysis modules, persistence and user account operations.
 
 ### `dto`
 
-Defines the request and response objects exchanged between the API and its clients.
+Defines the request and response objects exchanged between the API and its clients, including URL analysis, persistence and user registration DTOs.
 
 ### `model`
 
@@ -178,7 +185,7 @@ The project follows a layered architecture, keeping responsibilities separated t
 
 ### `entity`
 
-Defines the JPA entities used to persist analysis results and their relationship in PostgreSQL.
+Defines the JPA entities used to persist analysis results, user accounts and their relationships in PostgreSQL.
 
 ### `repository`
 
@@ -344,6 +351,40 @@ Delete a stored analysis:
 DELETE /api/analyses/{id}
 ```
 
+## User Registration API
+
+Register new user:
+
+```http request
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "StrongPassword123!"
+}
+```
+
+**Successful Response**
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "status": "ACTIVE",
+  "createdAt": "2026-08-20T12:45:30"
+}
+```
+
+**Attempting to register an already existing email returns**
+```json
+{
+  "status": 409,
+  "error": "Conflict",
+  "message": "Email is already registered",
+  "path": "/api/auth/register"
+}
+```
+
 ## Getting Started
 
 ### Prerequisites
@@ -434,6 +475,7 @@ The test suite includes:
 - Persistence integration tests using Testcontainers with a real PostgreSQL instance running in Docker.
 - JPA relationship and cascade tests covering DNS analysis, HTTP redirect chains, SSL/TLS data, security headers and security assessment persistence.
 - Cascade deletion tests verifying that related persisted entities are removed together with their parent analysis.
+- Unit and web layer tests for user registration, including successful registration and duplicate email handling.
 
 Run the complete test suite using the Maven Wrapper:
 
@@ -483,12 +525,17 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] Retrieve stored analysis by ID.
  - [x] Analysis history retrieval.
  - [x] Analysis history deletion.
+ - [x] User persistence and analysis ownership.
+ - [x] User registration.
+ - [x] Secure password hashing with Spring Security.
+ - [x] Duplicate email handling.
+ - [x] Automated user registration tests.
 
 ### Planned
 
  - [ ] Configurable security scoring policy
  - [ ] Dockerized application deployment
- - [ ] Authentication and user accounts
+ - [ ] User login and authentication
  - [ ] Domain reputation analysis using external services
 
 ## Author

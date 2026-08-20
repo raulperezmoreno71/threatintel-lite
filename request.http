@@ -16,3 +16,13 @@ GET http://localhost:8080/api/analyses
 ###
 
 DELETE http://localhost:8080/api/analyses/9
+
+###
+
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "raul@gmail.com",
+  "password": "prueba123"
+}
