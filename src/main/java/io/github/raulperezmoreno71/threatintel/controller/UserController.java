@@ -6,6 +6,7 @@ import io.github.raulperezmoreno71.threatintel.dto.auth.LoginResponse;
 import io.github.raulperezmoreno71.threatintel.dto.auth.RegisterRequest;
 import io.github.raulperezmoreno71.threatintel.dto.auth.RegisterResponse;
 import io.github.raulperezmoreno71.threatintel.entity.User;
+import io.github.raulperezmoreno71.threatintel.service.JwtService;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,10 +30,12 @@ import org.springframework.web.bind.annotation.RestController;
 )
 public class UserController {
 
-    private UserService userService;
+    private final UserService userService;
+    private final JwtService jwtService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, JwtService jwtService) {
         this.userService = userService;
+        this.jwtService = jwtService;
     }
 
     @Operation(
@@ -149,11 +152,14 @@ public class UserController {
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         User user = userService.login(request);
 
+        String token = jwtService.generateToken(user);
+
         LoginResponse response = new LoginResponse(
                 user.getId(),
                 user.getEmail(),
                 user.getStatus(),
-                "Login successful"
+                "Login successful",
+                token
         );
 
         return ResponseEntity.status(HttpStatus.OK).body(response);

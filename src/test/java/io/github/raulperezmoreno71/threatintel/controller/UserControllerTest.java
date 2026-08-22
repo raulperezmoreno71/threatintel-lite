@@ -6,6 +6,7 @@ import io.github.raulperezmoreno71.threatintel.entity.User;
 import io.github.raulperezmoreno71.threatintel.exception.EmailAlreadyExistException;
 import io.github.raulperezmoreno71.threatintel.exception.InvalidCredentialException;
 import io.github.raulperezmoreno71.threatintel.model.UserStatus;
+import io.github.raulperezmoreno71.threatintel.service.JwtService;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,8 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,6 +33,9 @@ class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private JwtService jwtService;
 
     @Test
     void shouldRegisterUserSuccessfully() throws Exception {
@@ -75,6 +78,7 @@ class UserControllerTest {
         User user = new User("user@example.com", "encoded-password", UserStatus.ACTIVE);
 
         when(userService.login(any(LoginRequest.class))).thenReturn(user);
+        when(jwtService.generateToken(user)).thenReturn("test-jwt-token");
 
         mockMvc.perform(
                 post("/api/auth/login")
@@ -84,7 +88,8 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("user@example.com"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
-                .andExpect(jsonPath("$.message").value("Login successful"));
+                .andExpect(jsonPath("$.message").value("Login successful"))
+                .andExpect(jsonPath("$.token").value("test-jwt-token"));
 
         verify(userService).login(any(LoginRequest.class));
     }
@@ -107,5 +112,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.path").value("/api/auth/login"));
 
         verify(userService).login(any(LoginRequest.class));
+        verifyNoInteractions(jwtService);
     }
 }

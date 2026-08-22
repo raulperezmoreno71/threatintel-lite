@@ -127,12 +127,15 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
  - [x] Hash user passwords using Spring Security PasswordEncoder.
  - [x] Prevent duplicate user registration by email.
  - [x] Return structured 409 Conflict responses for duplicate emails.
+ - [x] Authenticate users with email and password.
+ - [x] Generate JWT access tokens after successful login.
+ - [x] Configure JWT expiration and signing secret through application configuration.
 
 ## Tech Stack
 
  - **Language:** Java 21
  - **Framework:** Spring Boot
- - **Security:** Spring Security, Password Encoder
+ - **Security:** Spring Security, Password Encoder, JWT
  - **Persistence:** Spring Data JPA, Hibernate
  - **Database:** PostgreSQL
  - **Build Tool:** Maven
@@ -351,7 +354,9 @@ Delete a stored analysis:
 DELETE /api/analyses/{id}
 ```
 
-## User Registration API
+## Authentication API
+
+### Register
 
 Register new user:
 
@@ -382,6 +387,29 @@ Content-Type: application/json
   "error": "Conflict",
   "message": "Email is already registered",
   "path": "/api/auth/register"
+}
+```
+
+### Login
+
+```http request
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "StrongPassword123"
+}
+```
+
+**Successful response**
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "status": "ACTIVE",
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiJ9..."
 }
 ```
 
@@ -530,12 +558,14 @@ The project is being developed incrementally, with each milestone focused on lea
  - [x] Secure password hashing with Spring Security.
  - [x] Duplicate email handling.
  - [x] Automated user registration tests.
+ - [x] User login and credential validation.
+ - [x] JWT generation and validation.
 
 ### Planned
 
  - [ ] Configurable security scoring policy
  - [ ] Dockerized application deployment
- - [ ] User login and authentication
+ - [ ] JWT authentication filter and protected API endpoints.
  - [ ] Domain reputation analysis using external services
 
 ## Author

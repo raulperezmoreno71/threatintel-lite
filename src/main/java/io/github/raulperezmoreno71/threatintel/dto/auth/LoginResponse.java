@@ -30,16 +30,24 @@ public class LoginResponse {
     )
     private String message;
 
+    @Schema(
+            description = "JWT used to authenticate subsequent API requests",
+            examples = "eyJhbGciOiJIUzI1NiJ9..."
+    )
+    private String token;
+
     public LoginResponse(
             Long id,
             String email,
             UserStatus status,
-            String message
+            String message,
+            String token
     ) {
         this.id = id;
         this.email = email;
         this.status = status;
         this.message = message;
+        this.token = token;
     }
 
     public Long getId() {
@@ -56,5 +64,9 @@ public class LoginResponse {
 
     public String getMessage() {
         return message;
+    }
+
+    public String getToken() {
+        return token;
     }
 }
