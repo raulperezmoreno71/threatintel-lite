@@ -1,8 +1,10 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
+import io.github.raulperezmoreno71.threatintel.dto.auth.LoginRequest;
 import io.github.raulperezmoreno71.threatintel.dto.auth.RegisterRequest;
 import io.github.raulperezmoreno71.threatintel.entity.User;
 import io.github.raulperezmoreno71.threatintel.exception.EmailAlreadyExistException;
+import io.github.raulperezmoreno71.threatintel.exception.InvalidCredentialException;
 import io.github.raulperezmoreno71.threatintel.model.UserStatus;
 import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,5 +35,15 @@ public class UserService {
         );
 
         return userRepository.save(user);
+    }
+
+    public User login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail()).orElseThrow(() -> new InvalidCredentialException("Invalid email or password"));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new InvalidCredentialException("Invalid email or password");
+        }
+
+        return user;
     }
 }

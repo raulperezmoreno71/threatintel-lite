@@ -1,6 +1,8 @@
 package io.github.raulperezmoreno71.threatintel.controller;
 
 import io.github.raulperezmoreno71.threatintel.dto.ErrorResponse;
+import io.github.raulperezmoreno71.threatintel.dto.auth.LoginRequest;
+import io.github.raulperezmoreno71.threatintel.dto.auth.LoginResponse;
 import io.github.raulperezmoreno71.threatintel.dto.auth.RegisterRequest;
 import io.github.raulperezmoreno71.threatintel.dto.auth.RegisterResponse;
 import io.github.raulperezmoreno71.threatintel.entity.User;
@@ -92,5 +94,68 @@ public class UserController {
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(
+            summary = "Authenticate a user",
+            description = "Authenticates a user using the provided email and password."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Login successful",
+                    content = @Content(
+                            schema = @Schema(implementation = LoginResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Invalid email or password",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(
+                                    name = "Invalid credentials",
+                                    value = """
+                                            {
+                                                "status": 401,
+                                                "erro": Unauthorized",
+                                                "message": "Invalid email or password",
+                                                "path": "/api/auth/login"
+                                            }
+                                            """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid or malformed request",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(
+                                    name = "Malformed Request",
+                                    value = """
+                                            {
+                                                "status": 400,
+                                                "error": "Bad Request",
+                                                "message": "Malformed JSON request",
+                                                "path": "/api/auth/login"
+                                            }
+                                            """
+                            )
+                    )
+            )
+    })
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+        User user = userService.login(request);
+
+        LoginResponse response = new LoginResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getStatus(),
+                "Login successful"
+        );
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }

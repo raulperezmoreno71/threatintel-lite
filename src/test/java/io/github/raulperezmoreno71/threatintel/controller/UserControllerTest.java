@@ -1,8 +1,10 @@
 package io.github.raulperezmoreno71.threatintel.controller;
 
+import io.github.raulperezmoreno71.threatintel.dto.auth.LoginRequest;
 import io.github.raulperezmoreno71.threatintel.dto.auth.RegisterRequest;
 import io.github.raulperezmoreno71.threatintel.entity.User;
 import io.github.raulperezmoreno71.threatintel.exception.EmailAlreadyExistException;
+import io.github.raulperezmoreno71.threatintel.exception.InvalidCredentialException;
 import io.github.raulperezmoreno71.threatintel.model.UserStatus;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -64,5 +67,45 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.error").value("Conflict"))
                 .andExpect(jsonPath("$.message").value("Email is already registered"))
                 .andExpect(jsonPath("$.path").value("/api/auth/register"));
+    }
+
+    @Test
+    void shouldLoginUserSuccessfully() throws Exception {
+        LoginRequest request = new LoginRequest("user@example.com", "prueba123");
+        User user = new User("user@example.com", "encoded-password", UserStatus.ACTIVE);
+
+        when(userService.login(any(LoginRequest.class))).thenReturn(user);
+
+        mockMvc.perform(
+                post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("user@example.com"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.message").value("Login successful"));
+
+        verify(userService).login(any(LoginRequest.class));
+    }
+
+    @Test
+    void shouldReturnUnauthorizedWhenCredentialsAreInvalid() throws Exception {
+        LoginRequest request = new LoginRequest("user@example.com", "prueba123");
+
+        when(userService.login(any(LoginRequest.class))).thenThrow(new InvalidCredentialException("Invalid email or password"));
+
+        mockMvc.perform(
+                post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Invalid email or password"))
+                .andExpect(jsonPath("$.path").value("/api/auth/login"));
+
+        verify(userService).login(any(LoginRequest.class));
     }
 }
