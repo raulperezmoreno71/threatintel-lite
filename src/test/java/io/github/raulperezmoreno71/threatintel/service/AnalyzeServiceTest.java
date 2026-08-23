@@ -3,12 +3,19 @@ package io.github.raulperezmoreno71.threatintel.service;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeRequest;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeResponse;
 import io.github.raulperezmoreno71.threatintel.entity.Analysis;
+import io.github.raulperezmoreno71.threatintel.entity.User;
 import io.github.raulperezmoreno71.threatintel.model.*;
 import io.github.raulperezmoreno71.threatintel.repository.AnalysisRepository;
+import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.net.http.HttpResponse;
+import java.util.Collections;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -23,6 +30,8 @@ class AnalyzeServiceTest {
     private HttpAnalyzer httpAnalyzer;
     private DnsAnalyzer dnsAnalyzer;
     private AnalysisRepository analysisRepository;
+    private UserRepository userRepository;
+    private User user;
 
     private AnalyzeService analyzeService;
 
@@ -35,6 +44,16 @@ class AnalyzeServiceTest {
         httpAnalyzer = mock(HttpAnalyzer.class);
         dnsAnalyzer = mock(DnsAnalyzer.class);
         analysisRepository = mock(AnalysisRepository.class);
+        userRepository = mock(UserRepository.class);
+        user = mock(User.class);
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "test@example.com",
+                        null,
+                        Collections.emptyList()
+                )
+        );
 
         analyzeService = new AnalyzeService(
                 urlValidator,
@@ -43,8 +62,14 @@ class AnalyzeServiceTest {
                 sslAnalyzer,
                 securityHeadersAnalyzer,
                 securityAssessmentCalculator,
-                analysisRepository
+                analysisRepository,
+                userRepository
         );
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -70,6 +95,7 @@ class AnalyzeServiceTest {
         ).thenReturn(sslAnalysisResult);
         when(securityHeadersAnalyzer.analyze(finalResponse)).thenReturn(securityHeadersAnalysisResult);
         when(securityAssessmentCalculator.calculate(securityHeadersAnalysisResult)).thenReturn(securityAssessmentResult);
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
 
         when(securityHeadersAnalysisResult.getContentSecurityPolicy()).thenReturn(securityHeaderResult);
         when(securityHeadersAnalysisResult.getPermissionsPolicy()).thenReturn(securityHeaderResult);

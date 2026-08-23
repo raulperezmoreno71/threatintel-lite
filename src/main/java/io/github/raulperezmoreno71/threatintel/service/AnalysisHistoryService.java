@@ -4,9 +4,12 @@ import io.github.raulperezmoreno71.threatintel.dto.AnalysisHistoryResponse;
 import io.github.raulperezmoreno71.threatintel.entity.Analysis;
 import io.github.raulperezmoreno71.threatintel.entity.RedirectStepEntity;
 import io.github.raulperezmoreno71.threatintel.entity.SecurityHeaderResultEntity;
+import io.github.raulperezmoreno71.threatintel.entity.User;
 import io.github.raulperezmoreno71.threatintel.exception.AnalysisNotFoundException;
 import io.github.raulperezmoreno71.threatintel.model.*;
 import io.github.raulperezmoreno71.threatintel.repository.AnalysisRepository;
+import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -16,13 +19,17 @@ import java.util.List;
 public class AnalysisHistoryService {
 
     private final AnalysisRepository analysisRepository;
+    private final UserRepository userRepository;
 
-    public AnalysisHistoryService(AnalysisRepository analysisRepository) {
+    public AnalysisHistoryService(AnalysisRepository analysisRepository, UserRepository userRepository) {
         this.analysisRepository = analysisRepository;
+        this.userRepository = userRepository;
     }
 
     public List<AnalysisHistoryResponse> getAllAnalyses() {
-        List<Analysis> analyses = analysisRepository.findAll();
+        User user = getAuthenticatedUser();
+
+        List<Analysis> analyses = analysisRepository.findByUser(user);
 
         List<AnalysisHistoryResponse> responses = new ArrayList<>();
 
@@ -34,15 +41,25 @@ public class AnalysisHistoryService {
     }
 
     public AnalysisHistoryResponse getAnalysisById(Long id) {
-        Analysis analysis = analysisRepository.findById(id).orElseThrow(() -> new AnalysisNotFoundException(id));
+        User user = getAuthenticatedUser();
+
+        Analysis analysis = analysisRepository.findByIdAndUser(id, user).orElseThrow(() -> new AnalysisNotFoundException(id));
 
         return mapToResponse(analysis);
     }
 
     public void deleteAnalysisById(Long id) {
-        Analysis analysis = analysisRepository.findById(id).orElseThrow(() -> new AnalysisNotFoundException(id));
+        User user = getAuthenticatedUser();
+
+        Analysis analysis = analysisRepository.findByIdAndUser(id, user).orElseThrow(() -> new AnalysisNotFoundException(id));
 
         analysisRepository.delete(analysis);
+    }
+
+    private User getAuthenticatedUser() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        return userRepository.findByEmail(email).orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
     }
 
     private AnalysisHistoryResponse mapToResponse(Analysis analysis) {

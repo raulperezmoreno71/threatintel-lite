@@ -5,10 +5,11 @@ import io.github.raulperezmoreno71.threatintel.dto.AnalyzeResponse;
 import io.github.raulperezmoreno71.threatintel.entity.*;
 import io.github.raulperezmoreno71.threatintel.model.*;
 import io.github.raulperezmoreno71.threatintel.repository.AnalysisRepository;
+import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,6 +23,7 @@ public class AnalyzeService {
     private final SecurityHeadersAnalyzer securityHeadersAnalyzer;
     private final SecurityAssessmentCalculator securityAssessmentCalculator;
     private final AnalysisRepository analysisRepository;
+    private final UserRepository userRepository;
 
     public AnalyzeService (
             UrlValidator urlValidator,
@@ -30,7 +32,8 @@ public class AnalyzeService {
             SslAnalyzer sslAnalyzer,
             SecurityHeadersAnalyzer securityHeadersAnalyzer,
             SecurityAssessmentCalculator securityAssessmentCalculator,
-            AnalysisRepository analysisRepository
+            AnalysisRepository analysisRepository,
+            UserRepository userRepository
     ) {
         this.urlValidator = urlValidator;
         this.dnsAnalyzer = dnsAnalyzer;
@@ -39,6 +42,7 @@ public class AnalyzeService {
         this.securityHeadersAnalyzer = securityHeadersAnalyzer;
         this.securityAssessmentCalculator = securityAssessmentCalculator;
         this.analysisRepository = analysisRepository;
+        this.userRepository = userRepository;
     }
 
     public AnalyzeResponse analyze (AnalyzeRequest request) {
@@ -126,6 +130,12 @@ public class AnalyzeService {
                 securityHeadersAnalysis,
                 securityAssessmentEntity
         );
+
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+
+        user.addAnalysis(analysis);
 
         analysisRepository.save(analysis);
 

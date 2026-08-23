@@ -12,11 +12,14 @@ public class SecurityHeaderResultEntity {
 
     private String headerName;
     private boolean present;
+
+    @Column(columnDefinition = "TEXT")
     private String value;
 
     @Enumerated(EnumType.STRING)
     private SecurityStatus status;
 
+    @Column(columnDefinition = "TEXT")
     private String recommendation;
 
     @ManyToOne

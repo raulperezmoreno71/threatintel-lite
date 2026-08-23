@@ -3,6 +3,7 @@ package io.github.raulperezmoreno71.threatintel.controller;
 import io.github.raulperezmoreno71.threatintel.dto.AnalysisHistoryResponse;
 import io.github.raulperezmoreno71.threatintel.exception.AnalysisNotFoundException;
 import io.github.raulperezmoreno71.threatintel.service.AnalysisHistoryService;
+import io.github.raulperezmoreno71.threatintel.service.JwtService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -25,6 +26,9 @@ class AnalysisHistoryControllerTest {
 
     @MockitoBean
     private AnalysisHistoryService analysisHistoryService;
+
+    @MockitoBean
+    private JwtService jwtService;
 
     @Test
     void shouldReturnAnalysisById() throws Exception {

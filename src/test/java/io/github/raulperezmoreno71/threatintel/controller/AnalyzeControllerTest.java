@@ -3,6 +3,8 @@ package io.github.raulperezmoreno71.threatintel.controller;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeRequest;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeResponse;
 import io.github.raulperezmoreno71.threatintel.service.AnalyzeService;
+import io.github.raulperezmoreno71.threatintel.service.JwtService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -30,6 +32,15 @@ class AnalyzeControllerTest {
     @MockitoBean
     private AnalyzeService analyzeService;
 
+    @MockitoBean
+    private JwtService jwtService;
+
+    @BeforeEach
+    void setUp() {
+        when(jwtService.extractEmail("test-token"))
+                .thenReturn("test@example.com");
+    }
+
     @Test
     void shouldReturnOkWhenUrlIsAnalyzedSuccessfully() throws Exception {
         AnalyzeRequest request = new AnalyzeRequest("https://example.com");
@@ -45,12 +56,14 @@ class AnalyzeControllerTest {
                 null
         );
 
-        when(analyzeService.analyze(any(AnalyzeRequest.class))).thenReturn(serviceResponse);
+        when(analyzeService.analyze(any(AnalyzeRequest.class)))
+                .thenReturn(serviceResponse);
 
         mockMvc.perform(
-                post("/api/analyze")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
+                        post("/api/analyze")
+                                .header("Authorization", "Bearer test-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
                 )
                 .andExpect(status().isOk())
                 .andExpect(
@@ -65,7 +78,8 @@ class AnalyzeControllerTest {
 
         verify(analyzeService).analyze(
                 argThat(
-                        analyzeRequest -> "https://example.com".equals(analyzeRequest.getUrl())
+                        analyzeRequest ->
+                                "https://example.com".equals(analyzeRequest.getUrl())
                 )
         );
     }
@@ -74,14 +88,18 @@ class AnalyzeControllerTest {
     void shouldReturnBadRequestWhenUrlIsInvalid() throws Exception {
         AnalyzeRequest request = new AnalyzeRequest("  ");
 
-        when(analyzeService.analyze(any(AnalyzeRequest.class))).thenThrow(
-                new IllegalArgumentException("URL cannot be null or blank")
-        );
+        when(analyzeService.analyze(any(AnalyzeRequest.class)))
+                .thenThrow(
+                        new IllegalArgumentException(
+                                "URL cannot be null or blank"
+                        )
+                );
 
         mockMvc.perform(
-                post("/api/analyze")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
+                        post("/api/analyze")
+                                .header("Authorization", "Bearer test-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
                 )
                 .andExpect(status().isBadRequest())
                 .andExpect(
@@ -108,14 +126,18 @@ class AnalyzeControllerTest {
     void shouldReturnInternalServerErrorWhenSslAnalysisFails() throws Exception {
         AnalyzeRequest request = new AnalyzeRequest("https://example.com");
 
-        when(analyzeService.analyze(any(AnalyzeRequest.class))).thenThrow(
-                new RuntimeException("Could not analyze SSL certificate")
-        );
+        when(analyzeService.analyze(any(AnalyzeRequest.class)))
+                .thenThrow(
+                        new RuntimeException(
+                                "Could not analyze SSL certificate"
+                        )
+                );
 
         mockMvc.perform(
-                post("/api/analyze")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request))
+                        post("/api/analyze")
+                                .header("Authorization", "Bearer test-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
                 )
                 .andExpect(status().isInternalServerError())
                 .andExpect(
@@ -125,7 +147,8 @@ class AnalyzeControllerTest {
                         jsonPath("$.error").value("Internal Server Error")
                 )
                 .andExpect(
-                        jsonPath("$.message").value("Could not analyze SSL certificate")
+                        jsonPath("$.message")
+                                .value("Could not analyze SSL certificate")
                 )
                 .andExpect(
                         jsonPath("$.path").value("/api/analyze")
@@ -133,7 +156,8 @@ class AnalyzeControllerTest {
 
         verify(analyzeService).analyze(
                 argThat(
-                        analyzeRequest -> "https://example.com".equals(analyzeRequest.getUrl())
+                        analyzeRequest ->
+                                "https://example.com".equals(analyzeRequest.getUrl())
                 )
         );
     }
@@ -143,9 +167,10 @@ class AnalyzeControllerTest {
         String invalidJason = "{";
 
         mockMvc.perform(
-                post("/api/analyze")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(invalidJason)
+                        post("/api/analyze")
+                                .header("Authorization", "Bearer test-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(invalidJason)
                 )
                 .andExpect(status().isBadRequest())
                 .andExpect(
@@ -167,8 +192,9 @@ class AnalyzeControllerTest {
     @Test
     void shouldReturnBadRequestWhenRequestBodyIsMissing() throws Exception {
         mockMvc.perform(
-                post("/api/analyze")
-                        .contentType(MediaType.APPLICATION_JSON)
+                        post("/api/analyze")
+                                .header("Authorization", "Bearer test-token")
+                                .contentType(MediaType.APPLICATION_JSON)
                 )
                 .andExpect(status().isBadRequest());
 
