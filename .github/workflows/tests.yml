@@ -22,4 +22,5 @@ jobs:
         run: docker info
 
       - name: Run tests
+        working-directory: backend
         run: ./mvnw test

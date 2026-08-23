@@ -151,17 +151,25 @@ ThreatIntel Lite processes each URL through independent analysis modules and com
 ## Project Structure
 
 ```text
-src
-└── main
-    └── java
-        └── io.github.raulperezmoreno71.threatintel
-            ├── controller
-            ├── dto
-            ├── entity
-            ├── exception
-            ├── model
-            ├── repository
-            └── service
+backend
+├── .mvn
+├── pom.xml
+├── mvnw
+├── mvnw.cmd
+├── request.http
+└── src
+    └── main
+        └── java
+            └── io.github.raulperezmoreno71.threatintel
+                ├── config
+                ├── controller
+                ├── dto
+                ├── entity
+                ├── exception
+                ├── model
+                ├── repository
+                ├── security
+                └── service
 ```
 
 ### `controller`
@@ -428,7 +436,7 @@ Before running the project, make sure you have installed:
 
 ```bash
 git clone https://github.com/raulperezmoreno71/threatintel-lite.git
-cd threatintel-lite
+cd threatintel-lite/backend
 ```
 
 ### Database setup
@@ -448,6 +456,8 @@ DB_PASSWORD=your_postgresql_password
 ```
 
 ### Run the application
+
+Run these commands from the `backend` directory.
 
 Linux / macOS:
 
@@ -505,7 +515,7 @@ The test suite includes:
 - Cascade deletion tests verifying that related persisted entities are removed together with their parent analysis.
 - Unit and web layer tests for user registration, including successful registration and duplicate email handling.
 
-Run the complete test suite using the Maven Wrapper:
+Run the complete test suite from the `backend` directory using the Maven Wrapper:
 
 ```bash
 ./mvnw test
