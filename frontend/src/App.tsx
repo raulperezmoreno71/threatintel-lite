@@ -1,5 +1,6 @@
 import Header from './components/Header'
 import Hero from './components/Hero'
+import AnalysisFeatures from './components/AnalysisFeatures'
 
 function App() {
   return (
@@ -7,6 +8,7 @@ function App() {
       <Header />
       <main>
         <Hero />
+        <AnalysisFeatures />
       </main>
     </>
   )
