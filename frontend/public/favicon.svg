@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ThreatIntel Lite">
+  <defs>
+    <linearGradient id="a" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5eead4" />
+      <stop offset="1" stop-color="#14b8a6" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0b1220" />
+  <path d="M32 8 51 15v14c0 13-7.8 22.4-19 27C20.8 51.4 13 42 13 29V15l19-7Z" fill="url(#a)" />
+  <path d="M23 21h18v6h-6v17h-6V27h-6v-6Z" fill="#042f2e" />
+</svg>

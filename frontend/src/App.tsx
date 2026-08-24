@@ -1,9 +1,13 @@
+import Header from './components/Header'
+import Hero from './components/Hero'
 
 function App() {
   return (
     <>
-      <h1>ThreatIntel Lite</h1>
-      <p>Análisis de seguridad web</p>
+      <Header />
+      <main>
+        <Hero />
+      </main>
     </>
   )
 }
