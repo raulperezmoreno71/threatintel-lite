@@ -1,0 +1,187 @@
+.final-cta {
+  --cta-accent: #2dd4bf;
+  --cta-accent-light: #5eead4;
+  --cta-text: #f8fafc;
+  --cta-muted: #a4b2c5;
+
+  position: relative;
+  overflow: hidden;
+  color: var(--cta-text);
+  background: #0b1220;
+}
+
+.final-cta__content {
+  box-sizing: border-box;
+  width: min(100% - 2rem, 72rem);
+  margin: 0 auto;
+  padding: clamp(4.5rem, 8vw, 7rem) 0;
+}
+
+.final-cta__panel {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  padding: clamp(3rem, 7vw, 5.5rem) clamp(1.25rem, 7vw, 6rem);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% -35%, rgb(45 212 191 / 19%), transparent 27rem),
+    linear-gradient(145deg, rgb(20 33 53 / 98%), rgb(11 21 36 / 98%));
+  border: 1px solid rgb(148 163 184 / 17%);
+  border-radius: 1.25rem;
+  box-shadow: 0 28px 70px rgb(2 6 23 / 28%);
+  text-align: center;
+}
+
+.final-cta__panel::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: '';
+  opacity: 0.18;
+  background-image:
+    linear-gradient(rgb(148 163 184 / 7%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 7%) 1px, transparent 1px);
+  background-size: 3.5rem 3.5rem;
+  mask-image: radial-gradient(circle at center, black, transparent 72%);
+  pointer-events: none;
+}
+
+.final-cta__panel::after {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: min(70%, 30rem);
+  height: 1px;
+  content: '';
+  background: linear-gradient(90deg, transparent, var(--cta-accent-light), transparent);
+  transform: translateX(-50%);
+}
+
+.final-cta__eyebrow {
+  margin: 0 0 1rem;
+  color: var(--cta-accent);
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.final-cta h2 {
+  max-width: 16ch;
+  margin: 0 auto;
+  font-size: clamp(2.1rem, 4.7vw, 3.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+}
+
+.final-cta__description {
+  max-width: 39rem;
+  margin: 1.4rem auto 0;
+  color: var(--cta-muted);
+  font-size: clamp(0.98rem, 1.4vw, 1.08rem);
+  line-height: 1.75;
+}
+
+.final-cta__actions {
+  margin-top: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.final-cta__actions button {
+  min-height: 3.1rem;
+  padding: 0.75rem 1.2rem;
+  border: 1px solid transparent;
+  border-radius: 0.65rem;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.final-cta__primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: #042f2e;
+  background: var(--cta-accent);
+  box-shadow: 0 10px 28px rgb(45 212 191 / 18%);
+}
+
+.final-cta__primary-action:hover {
+  background: var(--cta-accent-light);
+  transform: translateY(-1px);
+}
+
+.final-cta__primary-action span {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.final-cta__actions .final-cta__secondary-action {
+  color: #dbe5f1;
+  background: rgb(148 163 184 / 7%);
+  border-color: rgb(148 163 184 / 23%);
+}
+
+.final-cta__actions .final-cta__secondary-action:hover {
+  color: var(--cta-text);
+  background: rgb(148 163 184 / 13%);
+  border-color: rgb(148 163 184 / 38%);
+}
+
+.final-cta__actions button:focus-visible {
+  outline: 3px solid rgb(45 212 191 / 35%);
+  outline-offset: 3px;
+}
+
+.final-cta__support {
+  margin: 1.4rem 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  color: #7f90a6;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.final-cta__support span {
+  color: var(--cta-accent);
+}
+
+@media (max-width: 34rem) {
+  .final-cta__content {
+    width: min(100% - 1.25rem, 72rem);
+    padding: 4rem 0;
+  }
+
+  .final-cta__panel {
+    padding: 3.25rem 1.15rem;
+    border-radius: 1rem;
+  }
+
+  .final-cta__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .final-cta__actions button {
+    width: 100%;
+  }
+
+  .final-cta__support {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .final-cta__actions button {
+    transition: none;
+  }
+}
