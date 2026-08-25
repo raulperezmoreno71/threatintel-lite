@@ -61,26 +61,32 @@
   gap: 0.75rem;
 }
 
-.site-header__actions button {
+.site-header__actions a {
   min-height: 2.5rem;
   padding: 0.6rem 1rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid transparent;
   border-radius: 0.55rem;
   font: inherit;
   font-size: 0.9rem;
   font-weight: 650;
-  cursor: pointer;
+  text-decoration: none;
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
 .site-header__login {
-  color: var(--header-muted);
-  background: transparent;
+  color: #dbe5f1;
+  background: rgb(148 163 184 / 7%);
+  border-color: rgb(148 163 184 / 20%);
 }
 
 .site-header__login:hover {
   color: var(--header-text);
-  background: rgb(148 163 184 / 9%);
+  background: rgb(148 163 184 / 13%);
+  border-color: rgb(148 163 184 / 34%);
 }
 
 .site-header__register {
@@ -94,7 +100,7 @@
   transform: translateY(-1px);
 }
 
-.site-header__actions button:focus-visible {
+.site-header__actions a:focus-visible {
   outline: 3px solid rgb(45 212 191 / 35%);
   outline-offset: 3px;
 }
@@ -120,7 +126,7 @@
     gap: 0.25rem;
   }
 
-  .site-header__actions button {
+  .site-header__actions a {
     min-height: 2.25rem;
     padding: 0.5rem 0.65rem;
     font-size: 0.8rem;

@@ -1,5 +1,6 @@
 html {
   background: #0b1220;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -12,4 +13,10 @@ body {
 
 button {
   font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

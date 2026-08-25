@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import './FinalCTA.css'
 
 function FinalCTA() {
@@ -14,15 +15,15 @@ function FinalCTA() {
             calificación y recomendaciones para interpretar cada resultado.
           </p>
 
-          <div className="final-cta__actions" role="group" aria-label="Acciones para comenzar">
-            <button className="final-cta__primary-action" type="button">
-              Analizar una URL
+          <nav className="final-cta__actions" aria-label="Acciones para comenzar">
+            <Link className="final-cta__primary-action" to="/register">
+              Empieza a analizar
               <span aria-hidden="true">→</span>
-            </button>
-            <button className="final-cta__secondary-action" type="button">
-              Crear una cuenta
-            </button>
-          </div>
+            </Link>
+            <Link className="final-cta__secondary-action" to="/login">
+              Ya tengo una cuenta
+            </Link>
+          </nav>
 
           <p className="final-cta__support">
             <span aria-hidden="true">✓</span>

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import './Hero.css'
 
 const analysisAreas = ['DNS', 'HTTP', 'Redirecciones', 'SSL/TLS', 'Cabeceras']
@@ -22,15 +23,15 @@ function Hero() {
             clara y accionable.
           </p>
 
-          <div className="hero__actions" role="group" aria-label="Acciones principales">
-            <button className="hero__primary-action" type="button">
-              Analizar una URL
+          <nav className="hero__actions" aria-label="Acciones principales">
+            <Link className="hero__primary-action" to="/register">
+              Empieza a analizar
               <span aria-hidden="true">→</span>
-            </button>
-            <button className="hero__secondary-action" type="button">
+            </Link>
+            <a className="hero__secondary-action" href="#analysis-features">
               Ver qué analizamos
-            </button>
-          </div>
+            </a>
+          </nav>
 
           <ul className="hero__features" aria-label="Áreas incluidas en el análisis">
             {analysisAreas.map((area) => (

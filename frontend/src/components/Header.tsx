@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import './Header.css'
 
 function Header() {
@@ -9,14 +10,14 @@ function Header() {
           <span>ThreatIntel <strong>Lite</strong></span>
         </div>
 
-        <div className="site-header__actions">
-          <button className="site-header__login" type="button">
+        <nav className="site-header__actions" aria-label="Acceso de usuario">
+          <Link className="site-header__login" to="/login">
             Iniciar sesión
-          </button>
-          <button className="site-header__register" type="button">
+          </Link>
+          <Link className="site-header__register" to="/register">
             Registrarse
-          </button>
-        </div>
+          </Link>
+        </nav>
       </div>
     </header>
   )

@@ -30,7 +30,11 @@ const analysisFeatures = [
 
 function AnalysisFeatures() {
     return (
-        <section className="analysis-features" aria-labelledby="analysis-features-title">
+        <section
+            id="analysis-features"
+            className="analysis-features"
+            aria-labelledby="analysis-features-title"
+        >
             <div className="analysis-features__content">
                 <header className="analysis-features__header">
                     <p className="analysis-features__eyebrow">Cobertura del análisis</p>

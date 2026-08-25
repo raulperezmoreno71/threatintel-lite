@@ -93,15 +93,19 @@
   gap: 0.75rem;
 }
 
-.hero__actions button {
+.hero__actions a {
   min-height: 3.1rem;
   padding: 0.75rem 1.2rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid transparent;
   border-radius: 0.65rem;
   font: inherit;
   font-size: 0.92rem;
   font-weight: 700;
-  cursor: pointer;
+  text-decoration: none;
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
@@ -136,7 +140,7 @@
   border-color: rgb(148 163 184 / 38%);
 }
 
-.hero__actions button:focus-visible {
+.hero__actions a:focus-visible {
   outline: 3px solid rgb(45 212 191 / 35%);
   outline-offset: 3px;
 }
@@ -419,7 +423,7 @@
     flex-direction: column;
   }
 
-  .hero__actions button {
+  .hero__actions a {
     justify-content: center;
     width: 100%;
   }
@@ -438,7 +442,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero__actions button {
+  .hero__actions a {
     transition: none;
   }
 }

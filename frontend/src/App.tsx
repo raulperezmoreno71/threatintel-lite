@@ -1,23 +1,17 @@
-import Header from './components/Header'
-import Hero from './components/Hero'
-import AnalysisFeatures from './components/AnalysisFeatures'
-import HowItWorks from './components/HowItWorks'
-import FinalCTA from './components/FinalCTA'
-import Footer from './components/Footer'
+import { Route, Routes } from 'react-router-dom'
+import LandingPage from './pages/LandingPage'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import DashboardPage from './pages/DashboardPage'
 
 function App() {
   return (
-    <>
-      <Header />
-      <main>
-        <Hero />
-        <AnalysisFeatures />
-        <HowItWorks />
-        <FinalCTA />
-      </main>
-
-      <Footer />
-    </>
+    <Routes>
+      <Route path='/' element={<LandingPage />} />
+      <Route path='/login' element={<LoginPage />} />
+      <Route path='/register' element={<RegisterPage />} />
+      <Route path='/dashboard' element={<DashboardPage />} />
+    </Routes>
   )
 }
 
