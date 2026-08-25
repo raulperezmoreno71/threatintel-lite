@@ -1,0 +1,96 @@
+.how-it-works {
+  --process-accent: #2dd4bf;
+  --process-accent-light: #5eead4;
+  --process-text: #f8fafc;
+  --process-muted: #9eacc0;
+
+  position: relative;
+  overflow: hidden;
+  color: var(--process-text);
+  background:
+    radial-gradient(circle at 50% 115%, rgb(45 212 191 / 10%), transparent 32rem),
+    #0b1220;
+  border-top: 1px solid rgb(148 163 184 / 10%);
+}
+
+.how-it-works::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  opacity: 0.13;
+  background-image:
+    linear-gradient(rgb(148 163 184 / 6%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 6%) 1px, transparent 1px);
+  background-size: 4rem 4rem;
+  mask-image: linear-gradient(to bottom, transparent, black 35%, transparent);
+  pointer-events: none;
+}
+
+.how-it-works__content {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: min(100% - 2rem, 72rem);
+  margin: 0 auto;
+  padding: clamp(5rem, 9vw, 7.5rem) 0;
+}
+
+.how-it-works__header {
+  max-width: 43rem;
+  margin: 0 auto clamp(3rem, 6vw, 4.5rem);
+  text-align: center;
+}
+
+.how-it-works__eyebrow {
+  margin: 0 0 1rem;
+  color: var(--process-accent);
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.how-it-works h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.045em;
+}
+
+.how-it-works__intro {
+  max-width: 36rem;
+  margin: 1.25rem auto 0;
+  color: var(--process-muted);
+  font-size: clamp(0.98rem, 1.4vw, 1.08rem);
+  line-height: 1.75;
+}
+
+.how-it-works__steps {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  list-style: none;
+}
+
+@media (max-width: 44rem) {
+  .how-it-works__content {
+    width: min(100% - 1.25rem, 72rem);
+    padding: 4.5rem 0;
+  }
+
+  .how-it-works__header {
+    margin-bottom: 2.75rem;
+    text-align: left;
+  }
+
+  .how-it-works__intro {
+    margin-left: 0;
+  }
+
+  .how-it-works__steps {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
