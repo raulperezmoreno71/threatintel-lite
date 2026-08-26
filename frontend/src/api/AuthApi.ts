@@ -1,8 +1,8 @@
-import type { LoginResponse, ApiErrorResponse } from "../types"
+import type { LoginResponse, ApiErrorResponse } from '../types'
 
 export async function login(
-    email:string, 
-    password:string
+    email: string,
+    password: string,
 ): Promise<LoginResponse> {
     const response = await fetch('http://localhost:8080/api/auth/login', {
         method: 'POST',
@@ -11,11 +11,15 @@ export async function login(
         },
         body: JSON.stringify({
             email,
-            password
-        })
+            password,
+        }),
     })
 
     if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error('Correo o contraseña incorrectos.')
+        }
+
         const errorData: ApiErrorResponse = await response.json()
         throw new Error(errorData.message)
     }
