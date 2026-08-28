@@ -3,7 +3,6 @@ export type LoginResponse = {
     email: string
     status: string
     message: string
-    token: string
 }
 
 export type ApiErrorResponse = {
