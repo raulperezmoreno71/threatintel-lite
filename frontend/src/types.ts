@@ -11,3 +11,9 @@ export type ApiErrorResponse = {
     message: string
     path: string
 }
+
+export type UserResponse = {
+    id: number
+    email: string
+    status: string
+}

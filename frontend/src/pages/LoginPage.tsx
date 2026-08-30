@@ -1,25 +1,41 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { SubmitEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { login } from '../api/AuthApi'
 import './LoginPage.css'
 
 function LoginPage() {
+    const navigate = useNavigate()
+    const location = useLocation()
+
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+    const [sessionMessage, setSessionMessage] = useState(location.state?.message ?? '')
+
+    useEffect(() => {
+        if (location.state?.message) {
+            navigate(location.pathname, {
+                replace: true,
+                state: null
+            })
+        }
+    }, [location.state?.message, location.pathname, navigate])
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
 
         if (isLoading) return
 
+        setSessionMessage('')
         setError('')
         setIsLoading(true)
 
         try {
             await login(email.trim(), password)
+
+            navigate('/dashboard')
         } catch (error) {
             if (error instanceof Error) {
                 setError(error.message)
@@ -82,6 +98,10 @@ function LoginPage() {
                                 required
                             />
                         </div>
+
+                        {sessionMessage && (
+                            <p className='login-form__error'>{sessionMessage}</p>
+                        )}
 
                         {error && (
                             <div className="login-form__error" role="alert">

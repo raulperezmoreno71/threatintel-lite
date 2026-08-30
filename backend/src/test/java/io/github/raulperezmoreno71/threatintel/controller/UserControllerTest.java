@@ -78,7 +78,6 @@ class UserControllerTest {
         User user = new User("user@example.com", "encoded-password", UserStatus.ACTIVE);
 
         when(userService.login(any(LoginRequest.class))).thenReturn(user);
-        when(jwtService.generateToken(user)).thenReturn("test-jwt-token");
 
         mockMvc.perform(
                 post("/api/auth/login")
@@ -88,8 +87,7 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("user@example.com"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
-                .andExpect(jsonPath("$.message").value("Login successful"))
-                .andExpect(jsonPath("$.token").value("test-jwt-token"));
+                .andExpect(jsonPath("$.message").value("Login successful"));
 
         verify(userService).login(any(LoginRequest.class));
     }

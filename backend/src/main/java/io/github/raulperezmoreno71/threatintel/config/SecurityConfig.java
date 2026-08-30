@@ -1,5 +1,6 @@
 package io.github.raulperezmoreno71.threatintel.config;
 
+import io.github.raulperezmoreno71.threatintel.security.CustomAuthenticationEntryPoint;
 import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,9 +20,11 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
     }
 
     @Bean
@@ -34,10 +37,12 @@ public class SecurityConfig {
         httpSecurity.csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(customAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/register",
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/api/auth/logout"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

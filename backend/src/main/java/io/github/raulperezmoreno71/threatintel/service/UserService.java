@@ -5,6 +5,7 @@ import io.github.raulperezmoreno71.threatintel.dto.auth.RegisterRequest;
 import io.github.raulperezmoreno71.threatintel.entity.User;
 import io.github.raulperezmoreno71.threatintel.exception.EmailAlreadyExistException;
 import io.github.raulperezmoreno71.threatintel.exception.InvalidCredentialException;
+import io.github.raulperezmoreno71.threatintel.exception.UserNotFoundException;
 import io.github.raulperezmoreno71.threatintel.model.UserStatus;
 import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,5 +46,9 @@ public class UserService {
         }
 
         return user;
+    }
+
+    public User getByEmail(String email) {
+        return userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
     }
 }

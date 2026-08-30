@@ -1,10 +1,7 @@
 package io.github.raulperezmoreno71.threatintel.controller;
 
 import io.github.raulperezmoreno71.threatintel.dto.ErrorResponse;
-import io.github.raulperezmoreno71.threatintel.dto.auth.LoginRequest;
-import io.github.raulperezmoreno71.threatintel.dto.auth.LoginResponse;
-import io.github.raulperezmoreno71.threatintel.dto.auth.RegisterRequest;
-import io.github.raulperezmoreno71.threatintel.dto.auth.RegisterResponse;
+import io.github.raulperezmoreno71.threatintel.dto.auth.*;
 import io.github.raulperezmoreno71.threatintel.entity.User;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
@@ -19,10 +16,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -171,5 +166,82 @@ public class UserController {
         );
 
         return ResponseEntity.status(HttpStatus.OK).header(HttpHeaders.SET_COOKIE, cookie.toString()).body(response);
+    }
+
+    @Operation(
+            summary = "Get authenticated user",
+            description = "Returns the email of the currently authenticated user."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Authenticated user retrieved successfully",
+                    content = @Content(
+                            schema = @Schema(implementation = UserResponse.class),
+                            examples = @ExampleObject(
+                                    name = "Authenticated user",
+                                    value = """
+                                            {
+                                                "id": 1,
+                                                "email": "user@example.com",
+                                                "status": "ACTIVE"
+                                            }
+                                            """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required or invalid token",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(
+                                    name = "Unauthorized",
+                                    value = """
+                                        {
+                                            "status": 401,
+                                            "error": "Unauthorized",
+                                            "message": "Authentication is required",
+                                            "path": "/api/users/me"
+                                        }
+                                        """
+                            )
+                    )
+            )
+    })
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> me(Authentication authentication) {
+        User user = userService.getByEmail(authentication.getName());
+
+        UserResponse response = new UserResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getStatus()
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Log out authenticated user",
+            description = "Logs out the current user by deleting the authentication cookie."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Logout successful"
+            )
+    })
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        ResponseCookie cookie = ResponseCookie.from("access_token", "")
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, cookie.toString()).build();
     }
 }
