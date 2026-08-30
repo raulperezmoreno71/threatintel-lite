@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { SubmitEvent } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { login } from '../api/AuthApi'
+import { login, getCurrentUser } from '../api/AuthApi'
 import './LoginPage.css'
 
 function LoginPage() {
@@ -22,6 +22,18 @@ function LoginPage() {
             })
         }
     }, [location.state?.message, location.pathname, navigate])
+
+    useEffect(() => {
+        getCurrentUser()
+        .then(() => {
+            navigate('/dashboard')
+        })
+        .catch(error => {
+            if (error.message !== 'UNAUTHORIZED') {
+                setError(error.message)
+            }
+        })
+    }, [navigate])
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
@@ -124,6 +136,11 @@ function LoginPage() {
                         ¿No tienes una cuenta? <Link to="/register">Crear una cuenta</Link>
                     </p>
                 </section>
+
+                <Link className="login-page__home-link" to="/">
+                    <span aria-hidden="true">←</span>
+                    Volver a la página principal
+                </Link>
             </div>
         </main>
     )

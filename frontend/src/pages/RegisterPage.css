@@ -1,0 +1,59 @@
+.register-page {
+  box-sizing: border-box;
+  min-height: 100svh;
+  padding: 2rem 1rem;
+  display: grid;
+  place-items: center;
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at 20% 10%, rgb(30 64 175 / 14%), transparent 28rem),
+    radial-gradient(circle at 85% 85%, rgb(45 212 191 / 10%), transparent 25rem),
+    #0b1220;
+}
+
+.register-page__content {
+  text-align: center;
+}
+
+.register-page h1 {
+  margin: 0;
+  font-size: clamp(2rem, 7vw, 2.75rem);
+  letter-spacing: -0.045em;
+}
+
+.register-page__home-link {
+  width: fit-content;
+  min-height: 2.5rem;
+  margin: 1.5rem auto 0;
+  padding: 0.55rem 0.8rem;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #aab8ca;
+  background: rgb(148 163 184 / 5%);
+  border: 1px solid rgb(148 163 184 / 14%);
+  border-radius: 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.register-page__home-link:hover {
+  color: #f8fafc;
+  background: rgb(148 163 184 / 10%);
+  border-color: rgb(45 212 191 / 24%);
+}
+
+.register-page__home-link:focus-visible {
+  outline: 3px solid rgb(45 212 191 / 35%);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .register-page__home-link {
+    transition: none;
+  }
+}

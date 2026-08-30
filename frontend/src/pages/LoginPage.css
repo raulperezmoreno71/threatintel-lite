@@ -288,6 +288,37 @@
   color: #99f6e4;
 }
 
+.login-page__home-link {
+  width: fit-content;
+  min-height: 2.5rem;
+  margin: 1.25rem auto 0;
+  padding: 0.55rem 0.8rem;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #aab8ca;
+  background: rgb(148 163 184 / 5%);
+  border: 1px solid rgb(148 163 184 / 14%);
+  border-radius: 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.login-page__home-link:hover {
+  color: var(--login-text);
+  background: rgb(148 163 184 / 10%);
+  border-color: rgb(45 212 191 / 24%);
+}
+
+.login-page__home-link:focus-visible {
+  outline: 3px solid rgb(45 212 191 / 35%);
+  outline-offset: 3px;
+}
+
 @keyframes login-spin {
   to {
     transform: rotate(360deg);
@@ -317,7 +348,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .login-form__field input,
-  .login-form__submit {
+  .login-form__submit,
+  .login-page__home-link {
     transition: none;
   }
 

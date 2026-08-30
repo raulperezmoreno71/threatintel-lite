@@ -22,8 +22,6 @@ public class AnalyzeService {
     private final SslAnalyzer sslAnalyzer;
     private final SecurityHeadersAnalyzer securityHeadersAnalyzer;
     private final SecurityAssessmentCalculator securityAssessmentCalculator;
-    private final AnalysisRepository analysisRepository;
-    private final UserRepository userRepository;
 
     public AnalyzeService (
             UrlValidator urlValidator,
@@ -31,9 +29,7 @@ public class AnalyzeService {
             HttpAnalyzer httpAnalyzer,
             SslAnalyzer sslAnalyzer,
             SecurityHeadersAnalyzer securityHeadersAnalyzer,
-            SecurityAssessmentCalculator securityAssessmentCalculator,
-            AnalysisRepository analysisRepository,
-            UserRepository userRepository
+            SecurityAssessmentCalculator securityAssessmentCalculator
     ) {
         this.urlValidator = urlValidator;
         this.dnsAnalyzer = dnsAnalyzer;
@@ -41,8 +37,6 @@ public class AnalyzeService {
         this.sslAnalyzer = sslAnalyzer;
         this.securityHeadersAnalyzer = securityHeadersAnalyzer;
         this.securityAssessmentCalculator = securityAssessmentCalculator;
-        this.analysisRepository = analysisRepository;
-        this.userRepository = userRepository;
     }
 
     public AnalyzeResponse analyze (AnalyzeRequest request) {
@@ -67,6 +61,7 @@ public class AnalyzeService {
 
         SecurityAssessmentResult securityAssessment = securityAssessmentCalculator.calculate(securityHeaders);
 
+/**
         DnsAnalysis dnsAnalysis = new DnsAnalysis(dns.getIps());
 
         HttpAnalysis httpAnalysis = new HttpAnalysis(
@@ -138,6 +133,7 @@ public class AnalyzeService {
         user.addAnalysis(analysis);
 
         analysisRepository.save(analysis);
+**/
 
         return new AnalyzeResponse(
                 "URL analyzed successfully",

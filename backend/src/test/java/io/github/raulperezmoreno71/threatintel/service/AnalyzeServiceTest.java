@@ -29,9 +29,6 @@ class AnalyzeServiceTest {
     private SecurityAssessmentCalculator securityAssessmentCalculator;
     private HttpAnalyzer httpAnalyzer;
     private DnsAnalyzer dnsAnalyzer;
-    private AnalysisRepository analysisRepository;
-    private UserRepository userRepository;
-    private User user;
 
     private AnalyzeService analyzeService;
 
@@ -43,17 +40,6 @@ class AnalyzeServiceTest {
         securityAssessmentCalculator = mock(SecurityAssessmentCalculator.class);
         httpAnalyzer = mock(HttpAnalyzer.class);
         dnsAnalyzer = mock(DnsAnalyzer.class);
-        analysisRepository = mock(AnalysisRepository.class);
-        userRepository = mock(UserRepository.class);
-        user = mock(User.class);
-
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(
-                        "test@example.com",
-                        null,
-                        Collections.emptyList()
-                )
-        );
 
         analyzeService = new AnalyzeService(
                 urlValidator,
@@ -61,15 +47,8 @@ class AnalyzeServiceTest {
                 httpAnalyzer,
                 sslAnalyzer,
                 securityHeadersAnalyzer,
-                securityAssessmentCalculator,
-                analysisRepository,
-                userRepository
+                securityAssessmentCalculator
         );
-    }
-
-    @AfterEach
-    void tearDown() {
-        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -95,14 +74,6 @@ class AnalyzeServiceTest {
         ).thenReturn(sslAnalysisResult);
         when(securityHeadersAnalyzer.analyze(finalResponse)).thenReturn(securityHeadersAnalysisResult);
         when(securityAssessmentCalculator.calculate(securityHeadersAnalysisResult)).thenReturn(securityAssessmentResult);
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
-
-        when(securityHeadersAnalysisResult.getContentSecurityPolicy()).thenReturn(securityHeaderResult);
-        when(securityHeadersAnalysisResult.getPermissionsPolicy()).thenReturn(securityHeaderResult);
-        when(securityHeadersAnalysisResult.getReferrerPolicy()).thenReturn(securityHeaderResult);
-        when(securityHeadersAnalysisResult.getStrictTransportSecurity()).thenReturn(securityHeaderResult);
-        when(securityHeadersAnalysisResult.getXContentTypeOptions()).thenReturn(securityHeaderResult);
-        when(securityHeadersAnalysisResult.getXFrameOptions()).thenReturn(securityHeaderResult);
 
         AnalyzeRequest request = new AnalyzeRequest("https://example.com");
 
@@ -136,6 +107,5 @@ class AnalyzeServiceTest {
                 securityHeadersAnalyzer,
                 securityAssessmentCalculator
         );
-        verify(analysisRepository).save(any(Analysis.class));
     }
 }
