@@ -564,6 +564,102 @@
   font-weight: 750;
 }
 
+.dashboard-discard-dialog {
+  width: min(calc(100% - 2rem), 28rem);
+  margin: auto;
+  padding: 0;
+  color: var(--dashboard-text);
+  background:
+    radial-gradient(circle at 90% 8%, rgb(251 113 133 / 12%), transparent 13rem),
+    linear-gradient(145deg, rgb(24 40 64 / 99%), rgb(12 25 43 / 99%));
+  border: 1px solid rgb(148 163 184 / 25%);
+  border-radius: 1rem;
+  box-shadow: 0 28px 70px rgb(2 6 23 / 55%);
+}
+
+.dashboard-discard-dialog::backdrop {
+  background: rgb(2 6 23 / 72%);
+  backdrop-filter: blur(4px);
+}
+
+.dashboard-discard-dialog__content {
+  padding: clamp(1.35rem, 5vw, 1.8rem);
+}
+
+.dashboard-discard-dialog__icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  color: #fecdd3;
+  background: rgb(244 63 94 / 12%);
+  border: 1px solid rgb(251 113 133 / 24%);
+  border-radius: 0.65rem;
+  font-size: 1.1rem;
+  font-weight: 850;
+}
+
+.dashboard-discard-dialog h2 {
+  margin: 1rem 0 0;
+  color: #f8fafc;
+  font-size: 1.25rem;
+  letter-spacing: -0.03em;
+}
+
+.dashboard-discard-dialog p {
+  margin: 0.65rem 0 0;
+  color: var(--dashboard-muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.dashboard-discard-dialog__actions {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.dashboard-discard-dialog__actions button {
+  min-height: 2.6rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.6rem;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.dashboard-discard-dialog__actions button:first-child {
+  color: #d9e5f1;
+  background: rgb(148 163 184 / 8%);
+  border: 1px solid rgb(148 163 184 / 24%);
+}
+
+.dashboard-discard-dialog__actions button:last-child {
+  color: #fff1f2;
+  background: rgb(225 29 72 / 82%);
+  border: 1px solid rgb(251 113 133 / 35%);
+}
+
+.dashboard-discard-dialog__actions button:hover {
+  transform: translateY(-1px);
+}
+
+.dashboard-discard-dialog__actions button:first-child:hover {
+  background: rgb(148 163 184 / 15%);
+}
+
+.dashboard-discard-dialog__actions button:last-child:hover {
+  background: #e11d48;
+}
+
+.dashboard-discard-dialog__actions button:focus-visible {
+  outline: 3px solid rgb(94 234 212 / 40%);
+  outline-offset: 3px;
+}
+
 @media (max-width: 46rem) {
   .dashboard-header__email {
     display: none;
@@ -571,6 +667,14 @@
 
   .dashboard-summary__grid {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-discard-dialog__actions {
+    flex-direction: column;
+  }
+
+  .dashboard-discard-dialog__actions button {
+    width: 100%;
   }
 }
 
@@ -644,6 +748,10 @@
   .dashboard-header__logout,
   .dashboard-analyze__controls input,
   .dashboard-analyze__controls button {
+    transition: none;
+  }
+
+  .dashboard-discard-dialog__actions button {
     transition: none;
   }
 

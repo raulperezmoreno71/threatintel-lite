@@ -3,6 +3,11 @@ import './AnalysisResults.css'
 
 type AnalysisResultsProps = {
   analysis: AnalyzeResponse
+  onDiscard: () => void
+  onSave: () => Promise<void>
+  isSaving: boolean
+  isSaved: boolean
+  saveError: string
 }
 
 type StatusTone = 'good' | 'warning' | 'missing' | 'critical' | 'neutral'
@@ -50,7 +55,14 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function AnalysisResults({ analysis }: AnalysisResultsProps) {
+function AnalysisResults({
+  analysis,
+  onDiscard,
+  onSave,
+  isSaving,
+  isSaved,
+  saveError,
+}: AnalysisResultsProps) {
   const { dns, http, ssl, securityAssessment } = analysis
   const safeScore = Math.min(100, Math.max(0, securityAssessment.score))
 
@@ -362,6 +374,48 @@ function AnalysisResults({ analysis }: AnalysisResultsProps) {
           ))}
         </div>
       </section>
+
+      <footer className="analysis-results__actions" aria-label="Acciones del análisis">
+        <div>
+          <strong>¿Qué quieres hacer con este resultado?</strong>
+          <p>El análisis está listo para que decidas el siguiente paso.</p>
+        </div>
+
+        <div className="analysis-results__action-buttons">
+          <button
+            className="analysis-results__discard"
+            type="button"
+            onClick={onDiscard}
+            disabled={isSaving}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 7h16" />
+              <path d="M9 7V4h6v3" />
+              <path d="m7 7 1 13h8l1-13" />
+              <path d="M10 11v5M14 11v5" />
+            </svg>
+            Descartar análisis
+          </button>
+
+          <button
+            className="analysis-results__save"
+            type="button"
+            onClick={onSave}
+            disabled={isSaving || isSaved}
+            aria-busy={isSaving}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 4h12l2 2v14H5Z" />
+              <path d="M8 4v6h8V4" />
+              <path d="M8 20v-6h8v6" />
+            </svg>
+            {isSaving ? 'Guardando…' : isSaved ? 'Análisis guardado' : 'Guardar análisis'}
+          </button>
+        </div>
+
+        {saveError && <p className="analysis-results__save-error" role="alert">{saveError}</p>}
+        {isSaved && <p className="analysis-results__save-success" aria-live="polite">Análisis guardado correctamente.</p>}
+      </footer>
     </section>
   )
 }

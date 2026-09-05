@@ -1,10 +1,8 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
 import io.github.raulperezmoreno71.threatintel.dto.AnalysisHistoryResponse;
-import io.github.raulperezmoreno71.threatintel.entity.Analysis;
-import io.github.raulperezmoreno71.threatintel.entity.RedirectStepEntity;
-import io.github.raulperezmoreno71.threatintel.entity.SecurityHeaderResultEntity;
-import io.github.raulperezmoreno71.threatintel.entity.User;
+import io.github.raulperezmoreno71.threatintel.dto.SaveAnalysisRequest;
+import io.github.raulperezmoreno71.threatintel.entity.*;
 import io.github.raulperezmoreno71.threatintel.exception.AnalysisNotFoundException;
 import io.github.raulperezmoreno71.threatintel.model.*;
 import io.github.raulperezmoreno71.threatintel.repository.AnalysisRepository;
@@ -56,10 +54,123 @@ public class AnalysisHistoryService {
         analysisRepository.delete(analysis);
     }
 
+    public void saveAnalysis(SaveAnalysisRequest request) {
+        User user = getAuthenticatedUser();
+
+        Analysis analysis = mapToEntity(request, user);
+
+        analysisRepository.save(analysis);
+    }
+
     private User getAuthenticatedUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
 
         return userRepository.findByEmail(email).orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+    }
+
+    private Analysis mapToEntity(SaveAnalysisRequest request, User user) {
+        DnsAnalysisResult dns = request.getDns();
+        HttpAnalysisResult http = request.getHttp();
+        SslAnalysisResult ssl = request.getSsl();
+        SecurityHeadersAnalysisResult securityHeaders = request.getSecurityHeaders();
+        SecurityAssessmentResult securityAssessment = request.getSecurityAssessment();
+
+        DnsAnalysis dnsAnalysis = new DnsAnalysis(dns.getIps());
+
+        HttpAnalysis httpAnalysis = new HttpAnalysis(
+                http.getStatusCode(),
+                http.getContentType(),
+                http.getServer(),
+                http.getContentLength(),
+                http.getFinalUrl(),
+                http.getTotalResponseTimeMs()
+        );
+
+        List<RedirectStepEntity> redirectEntities = new ArrayList<>();
+
+        for (RedirectStep step : http.getRedirectChain()) {
+            RedirectStepEntity entity = new RedirectStepEntity(
+                    step.getUrl(),
+                    step.getStatusCode(),
+                    step.getLocation(),
+                    step.getResponseTimeMs(),
+                    httpAnalysis
+            );
+
+            redirectEntities.add(entity);
+        }
+
+        httpAnalysis.setRedirectChain(redirectEntities);
+
+        SslAnalysis sslAnalysis = null;
+
+        if (ssl != null) {
+            sslAnalysis = new SslAnalysis(
+                    ssl.getIssuer(),
+                    ssl.getSubject(),
+                    ssl.getValidFrom(),
+                    ssl.getValidUntil(),
+                    ssl.getDaysUntilExpiration(),
+                    ssl.getStatus(),
+                    ssl.getRecommendation()
+            );
+        }
+
+        SecurityHeadersAnalysis securityHeadersAnalysis = new SecurityHeadersAnalysis();
+
+        addSecurityHeaderEntities(securityHeaders, securityHeadersAnalysis);
+
+        SecurityAssessmentEntity securityAssessmentEntity = new SecurityAssessmentEntity(
+                securityAssessment.getScore(),
+                securityAssessment.getGrade(),
+                securityAssessment.getGoodHeaders(),
+                securityAssessment.getWarningHeaders(),
+                securityAssessment.getMissingHeaders()
+        );
+
+        Analysis analysis = new Analysis(
+                "URL analyzed successfully",
+                request.getUrl(),
+                request.getDomain(),
+                dnsAnalysis,
+                httpAnalysis,
+                sslAnalysis,
+                securityHeadersAnalysis,
+                securityAssessmentEntity
+        );
+
+        user.addAnalysis(analysis);
+
+        return analysis;
+    }
+
+    private void addSecurityHeaderEntities(
+            SecurityHeadersAnalysisResult securityHeaders,
+            SecurityHeadersAnalysis securityHeadersAnalysis
+    ) {
+        SecurityHeaderResultEntity strictTransportSecurity = createSecurityEntity("Strict-Transport-Security", securityHeaders.getStrictTransportSecurity());
+        SecurityHeaderResultEntity contentSecurityPolicy = createSecurityEntity("Content-Security-Policy", securityHeaders.getContentSecurityPolicy());
+        SecurityHeaderResultEntity xFrameOptions = createSecurityEntity("X-Frame-Options", securityHeaders.getXFrameOptions());
+        SecurityHeaderResultEntity xContentTypeOptions = createSecurityEntity("X-Content-Type-Options", securityHeaders.getXContentTypeOptions());
+        SecurityHeaderResultEntity referrerPolicy = createSecurityEntity("Referrer-Policy", securityHeaders.getReferrerPolicy());
+        SecurityHeaderResultEntity permissionsPolicy = createSecurityEntity("Permissions-Policy", securityHeaders.getPermissionsPolicy());
+
+        securityHeadersAnalysis.addHeader(strictTransportSecurity);
+        securityHeadersAnalysis.addHeader(contentSecurityPolicy);
+        securityHeadersAnalysis.addHeader(xFrameOptions);
+        securityHeadersAnalysis.addHeader(xContentTypeOptions);
+        securityHeadersAnalysis.addHeader(referrerPolicy);
+        securityHeadersAnalysis.addHeader(permissionsPolicy);
+    }
+
+    private SecurityHeaderResultEntity createSecurityEntity(String headerName, SecurityHeaderResult header) {
+        return new SecurityHeaderResultEntity(
+                headerName,
+                header.isPresent(),
+                header.getValue(),
+                header.getStatus(),
+                header.getRecommendation()
+        );
     }
 
     private AnalysisHistoryResponse mapToResponse(Analysis analysis) {

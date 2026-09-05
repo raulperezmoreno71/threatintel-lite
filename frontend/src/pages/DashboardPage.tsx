@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { SubmitEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getCurrentUser, logout } from '../api/AuthApi'
 import type { AnalyzeResponse, UserResponse } from '../types'
 import { analyzeUrl } from '../api/AnalyzeApi'
+import { saveAnalysis } from '../api/AnalysisHistoryApi'
 import AnalysisResults from '../components/AnalysisResults'
 import './DashboardPage.css'
 
@@ -14,8 +15,13 @@ function DashboardPage() {
     const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null)
     const [isAnalyzing, setIsAnalyzing] = useState(false)
     const [analysisError, setAnalysisError] = useState('')
+    const [isSavingAnalysis, setIsSavingAnalysis] = useState(false)
+    const [saveError, setSaveError] = useState('')
+    const [isAnalysisSaved, setIsAnalysisSaved] = useState(false)
+    const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false)
 
     const navigate = useNavigate()
+    const discardDialogRef = useRef<HTMLDialogElement>(null)
 
     useEffect(() => {
         getCurrentUser()
@@ -34,6 +40,22 @@ function DashboardPage() {
         })
     }, [navigate])
 
+    useEffect(() => {
+        const dialog = discardDialogRef.current
+
+        if (!dialog) {
+            return
+        }
+
+        if (isDiscardDialogOpen && !dialog.open) {
+            dialog.showModal()
+        }
+
+        if (!isDiscardDialogOpen && dialog.open) {
+            dialog.close()
+        }
+    }, [isDiscardDialogOpen])
+
     async function handleLogout() {
         try {
             await logout()
@@ -50,6 +72,8 @@ function DashboardPage() {
 
         setAnalysis(null)
         setAnalysisError('')
+        setSaveError('')
+        setIsAnalysisSaved(false)
 
         setIsAnalyzing(true)
 
@@ -64,6 +88,46 @@ function DashboardPage() {
             setIsAnalyzing(false)
         }
 
+    }
+
+    function handleDiscardRequest() {
+        setIsDiscardDialogOpen(true)
+    }
+
+    function handleDiscardAnalysis() {
+        setAnalysis(null)
+        setSaveError('')
+        setIsAnalysisSaved(false)
+        setIsDiscardDialogOpen(false)
+    }
+
+    async function handleSaveAnalysis() {
+        if (!analysis) {
+            return
+        }
+
+        setIsSavingAnalysis(true)
+        setSaveError('')
+
+        try {
+            await saveAnalysis(analysis)
+            setIsAnalysisSaved(true)
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.message === 'UNAUTHORIZED') {
+                    navigate('/login', {
+                        state: {
+                            message: 'Tu sesión ha caducado. Vuelve a iniciar sesión.',
+                        },
+                    })
+                    return
+                }
+
+                setSaveError(error.message)
+            }
+        } finally {
+            setIsSavingAnalysis(false)
+        }
     }
 
     const accountStatus = user?.status === 'ACTIVE'
@@ -180,7 +244,16 @@ function DashboardPage() {
                     </ul>
                 </section>
 
-                {analysis && <AnalysisResults analysis={analysis} />}
+                {analysis && (
+                    <AnalysisResults
+                        analysis={analysis}
+                        onDiscard={handleDiscardRequest}
+                        onSave={handleSaveAnalysis}
+                        isSaving={isSavingAnalysis}
+                        isSaved={isAnalysisSaved}
+                        saveError={saveError}
+                    />
+                )}
 
                 <section className="dashboard-summary" aria-labelledby="summary-title">
                     <div className="dashboard-summary__heading">
@@ -220,6 +293,33 @@ function DashboardPage() {
                     </dl>
                 </section>
             </main>
+
+            <dialog
+                className="dashboard-discard-dialog"
+                ref={discardDialogRef}
+                aria-labelledby="discard-dialog-title"
+                aria-describedby="discard-dialog-description"
+                onClose={() => setIsDiscardDialogOpen(false)}
+            >
+                <div className="dashboard-discard-dialog__content">
+                    <span className="dashboard-discard-dialog__icon" aria-hidden="true">
+                        !
+                    </span>
+                    <h2 id="discard-dialog-title">¿Descartar este análisis?</h2>
+                    <p id="discard-dialog-description">
+                        El resultado dejará de mostrarse en el dashboard. Esta acción no elimina análisis ya guardados.
+                    </p>
+
+                    <div className="dashboard-discard-dialog__actions">
+                        <button type="button" onClick={() => setIsDiscardDialogOpen(false)} autoFocus>
+                            No, conservarlo
+                        </button>
+                        <button type="button" onClick={handleDiscardAnalysis}>
+                            Sí, descartar
+                        </button>
+                    </div>
+                </div>
+            </dialog>
         </div>
     )
 }

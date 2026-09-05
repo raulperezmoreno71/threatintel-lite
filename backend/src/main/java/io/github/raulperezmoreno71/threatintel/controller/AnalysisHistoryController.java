@@ -2,6 +2,7 @@ package io.github.raulperezmoreno71.threatintel.controller;
 
 import io.github.raulperezmoreno71.threatintel.dto.AnalysisHistoryResponse;
 import io.github.raulperezmoreno71.threatintel.dto.ErrorResponse;
+import io.github.raulperezmoreno71.threatintel.dto.SaveAnalysisRequest;
 import io.github.raulperezmoreno71.threatintel.service.AnalysisHistoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -90,5 +91,11 @@ public class AnalysisHistoryController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteAnalysisById(@PathVariable Long id) {
         analysisHistoryService.deleteAnalysisById(id);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public void saveAnalysis(@RequestBody SaveAnalysisRequest request) {
+        analysisHistoryService.saveAnalysis(request);
     }
 }
