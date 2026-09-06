@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { SubmitEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { getCurrentUser, logout } from '../api/AuthApi'
 import type { AnalyzeResponse, UserResponse } from '../types'
 import { analyzeUrl } from '../api/AnalyzeApi'
@@ -142,6 +142,16 @@ function DashboardPage() {
                         <span className="dashboard-header__mark" aria-hidden="true">T</span>
                         <span>ThreatIntel <strong>Lite</strong></span>
                     </Link>
+
+                    <nav className="dashboard-header__navigation" aria-label="Navegación del dashboard">
+                        <NavLink className="dashboard-header__nav-link" to="/analyses">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M6 3h9l3 3v15H6Z" />
+                                <path d="M9 10h6M9 14h6" />
+                            </svg>
+                            <span>Mis análisis</span>
+                        </NavLink>
+                    </nav>
 
                     <div className="dashboard-header__account">
                         {user && <span className="dashboard-header__email">{user.email}</span>}

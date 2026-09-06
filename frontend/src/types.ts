@@ -83,3 +83,13 @@ export type SecurityAssessmentResult = {
     warningHeaders: number,
     missingHeaders: number
 }
+
+export type RegisterResponse = {
+    email: string
+    status: string
+}
+
+export type AnalysisHistoryResponse = AnalyzeResponse & {
+    id: number
+    createdAt: string
+}

@@ -1,4 +1,4 @@
-import type { LoginResponse, ApiErrorResponse, UserResponse } from '../types'
+import type { LoginResponse, RegisterResponse, ApiErrorResponse, UserResponse } from '../types'
 import { apiFetch } from './ApiClient'
 
 export async function login(
@@ -23,6 +23,31 @@ export async function login(
     }
 
     const data: LoginResponse = await response.json()
+
+    return data
+}
+
+export async function register(
+    email: string,
+    password: string,
+): Promise<RegisterResponse> {
+    const response = await apiFetch('http://localhost:8080/api/auth/register', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            email,
+            password,
+        }),
+    })
+
+    if (!response.ok) {
+        const errorData: ApiErrorResponse = await response.json()
+        throw new Error(errorData.message)
+    }
+
+    const data: RegisterResponse = await response.json()
 
     return data
 }

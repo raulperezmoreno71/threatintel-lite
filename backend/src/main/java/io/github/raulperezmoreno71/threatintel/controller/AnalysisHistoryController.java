@@ -93,6 +93,46 @@ public class AnalysisHistoryController {
         analysisHistoryService.deleteAnalysisById(id);
     }
 
+    @Operation(
+            summary = "Save an analysis",
+            description = "Persists a previously calculated URL analysis for the authenticated user."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "Analysis saved successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid analysis data",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication is required",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error while saving the analysis",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(
+                                    implementation = ErrorResponse.class
+                            )
+                    )
+            )
+    })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public void saveAnalysis(@RequestBody SaveAnalysisRequest request) {

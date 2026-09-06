@@ -3,11 +3,11 @@ import './AnalysisResults.css'
 
 type AnalysisResultsProps = {
   analysis: AnalyzeResponse
-  onDiscard: () => void
-  onSave: () => Promise<void>
-  isSaving: boolean
-  isSaved: boolean
-  saveError: string
+  onDiscard?: () => void
+  onSave?: () => Promise<void>
+  isSaving?: boolean
+  isSaved?: boolean
+  saveError?: string
 }
 
 type StatusTone = 'good' | 'warning' | 'missing' | 'critical' | 'neutral'
@@ -59,9 +59,9 @@ function AnalysisResults({
   analysis,
   onDiscard,
   onSave,
-  isSaving,
-  isSaved,
-  saveError,
+  isSaving = false,
+  isSaved = false,
+  saveError = '',
 }: AnalysisResultsProps) {
   const { dns, http, ssl, securityAssessment } = analysis
   const safeScore = Math.min(100, Math.max(0, securityAssessment.score))
@@ -375,7 +375,8 @@ function AnalysisResults({
         </div>
       </section>
 
-      <footer className="analysis-results__actions" aria-label="Acciones del análisis">
+      {onDiscard && onSave && (
+        <footer className="analysis-results__actions" aria-label="Acciones del análisis">
         <div>
           <strong>¿Qué quieres hacer con este resultado?</strong>
           <p>El análisis está listo para que decidas el siguiente paso.</p>
@@ -415,7 +416,8 @@ function AnalysisResults({
 
         {saveError && <p className="analysis-results__save-error" role="alert">{saveError}</p>}
         {isSaved && <p className="analysis-results__save-success" aria-live="polite">Análisis guardado correctamente.</p>}
-      </footer>
+        </footer>
+      )}
     </section>
   )
 }
