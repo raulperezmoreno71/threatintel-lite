@@ -1,5 +1,6 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
+import io.github.raulperezmoreno71.threatintel.dto.ChangePasswordRequest;
 import io.github.raulperezmoreno71.threatintel.dto.auth.LoginRequest;
 import io.github.raulperezmoreno71.threatintel.dto.auth.RegisterRequest;
 import io.github.raulperezmoreno71.threatintel.entity.User;
@@ -50,5 +51,23 @@ public class UserService {
 
     public User getByEmail(String email) {
         return userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
+    }
+
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new InvalidCredentialException("Invalid password");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new InvalidCredentialException("New password must be different from current password");
+        }
+
+        String encodedNewPassword = passwordEncoder.encode(request.getNewPassword());
+
+        user.setPasswordHash(encodedNewPassword);
+
+        userRepository.save(user);
     }
 }

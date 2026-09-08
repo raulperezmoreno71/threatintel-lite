@@ -1,5 +1,6 @@
 package io.github.raulperezmoreno71.threatintel.controller;
 
+import io.github.raulperezmoreno71.threatintel.dto.ChangePasswordRequest;
 import io.github.raulperezmoreno71.threatintel.dto.ErrorResponse;
 import io.github.raulperezmoreno71.threatintel.dto.auth.*;
 import io.github.raulperezmoreno71.threatintel.entity.User;
@@ -243,5 +244,12 @@ public class UserController {
                 .build();
 
         return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, cookie.toString()).build();
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@RequestBody ChangePasswordRequest request, Authentication authentication) {
+        userService.changePassword(authentication.getName(), request);
+
+        return ResponseEntity.noContent().build();
     }
 }

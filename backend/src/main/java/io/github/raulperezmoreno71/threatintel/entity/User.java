@@ -89,4 +89,8 @@ public class User {
         analyses.add(analysis);
         analysis.setUser(this);
     }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
 }

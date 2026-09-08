@@ -82,6 +82,15 @@ function DashboardPage() {
             setAnalysis(result)
         } catch (error) {
             if (error instanceof Error) {
+                if (error.message === 'UNAUTHORIZED') {
+                    navigate('/login', {
+                        state: {
+                            message: 'Tu sesión ha caducado. Vuelve a iniciar sesión.',
+                        },
+                    })
+                    return
+                }
+
                 setAnalysisError(error.message)
             }
         } finally {
@@ -155,6 +164,14 @@ function DashboardPage() {
 
                     <div className="dashboard-header__account">
                         {user && <span className="dashboard-header__email">{user.email}</span>}
+                        <Link className="dashboard-header__password-link" to="/change-password">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <rect x="5" y="10" width="14" height="10" rx="2" />
+                                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                                <path d="M12 14v2" />
+                            </svg>
+                            <span>Cambiar contraseña</span>
+                        </Link>
                         <button className="dashboard-header__logout" type="button" onClick={handleLogout}>
                             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                 <path d="M10 5H5v14h5" />

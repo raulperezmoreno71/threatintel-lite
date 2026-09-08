@@ -5,9 +5,8 @@ export async function login(
     email: string,
     password: string,
 ): Promise<LoginResponse> {
-    const response = await fetch('http://localhost:8080/api/auth/login', {
+    const response = await apiFetch('http://localhost:8080/api/auth/login', {
         method: 'POST',
-        credentials: 'include',
         headers: {
             'Content-Type': 'application/json',
         },
@@ -71,12 +70,36 @@ export async function getCurrentUser(): Promise<UserResponse> {
 }
 
 export async function logout(): Promise<void> {
-    const response = await fetch('http://localhost:8080/api/auth/logout', {
+    const response = await apiFetch('http://localhost:8080/api/auth/logout', {
         method: 'POST',
-        credentials: 'include'
     })
 
     if (!response.ok) {
         throw new Error('No se ha podido cerrar sesión')
+    }
+}
+
+export async function changePassword(
+    currentPassword: string,
+    newPassword: string
+): Promise<void> {
+    const response = await fetch('http://localhost:8080/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+            currentPassword,
+            newPassword
+        })
+    })
+
+    if (!response.ok) {
+        const errorData = await response
+            .json()
+            .catch(() => null) as ApiErrorResponse | null
+
+        throw new Error(errorData?.message || 'No se ha podido cambiar la contraseña')
     }
 }
