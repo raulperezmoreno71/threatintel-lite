@@ -382,13 +382,113 @@ class AnalysisRepositoryIntegrationTest {
         assertNull(deletedAssessment);
     }
 
+    @Test
+    void shouldFindOnlyAnalysesOwnedByUser() {
+        User firstUser = createAndSaveUser("first@example.com");
+        User secondUser = createAndSaveUser("second@example.com");
+
+        Analysis firstAnalysis = createAndSaveAnalysis(
+                firstUser,
+                "https://first.example.com",
+                "first.example.com"
+        );
+        Analysis secondAnalysis = createAndSaveAnalysis(
+                firstUser,
+                "https://second.example.com",
+                "second.example.com"
+        );
+        Analysis otherUserAnalysis = createAndSaveAnalysis(
+                secondUser,
+                "https://private.example.com",
+                "private.example.com"
+        );
+
+        entityManager.clear();
+
+        List<Analysis> found = analysisRepository.findByUser(firstUser);
+
+        assertEquals(2, found.size());
+        assertTrue(found.stream().anyMatch(analysis ->
+                analysis.getId().equals(firstAnalysis.getId())
+        ));
+        assertTrue(found.stream().anyMatch(analysis ->
+                analysis.getId().equals(secondAnalysis.getId())
+        ));
+        assertFalse(found.stream().anyMatch(analysis ->
+                analysis.getId().equals(otherUserAnalysis.getId())
+        ));
+        assertTrue(found.stream().allMatch(analysis ->
+                analysis.getUser().getId().equals(firstUser.getId())
+        ));
+    }
+
+    @Test
+    void shouldFindAnalysisByIdWhenUserIsOwner() {
+        User owner = createAndSaveUser("owner@example.com");
+        Analysis saved = createAndSaveAnalysis(
+                owner,
+                "https://example.com",
+                "example.com"
+        );
+
+        entityManager.clear();
+
+        Optional<Analysis> found =
+                analysisRepository.findByIdAndUser(saved.getId(), owner);
+
+        assertTrue(found.isPresent());
+        assertEquals(saved.getId(), found.get().getId());
+        assertEquals("https://example.com", found.get().getUrl());
+        assertEquals(owner.getId(), found.get().getUser().getId());
+    }
+
+    @Test
+    void shouldNotFindAnalysisByIdWhenUserIsNotOwner() {
+        User owner = createAndSaveUser("owner@example.com");
+        User otherUser = createAndSaveUser("other@example.com");
+        Analysis saved = createAndSaveAnalysis(
+                owner,
+                "https://example.com",
+                "example.com"
+        );
+
+        entityManager.clear();
+
+        Optional<Analysis> found =
+                analysisRepository.findByIdAndUser(saved.getId(), otherUser);
+
+        assertTrue(found.isEmpty());
+        assertTrue(analysisRepository.findById(saved.getId()).isPresent());
+    }
+
     private User createAndSaveUser() {
+        return createAndSaveUser("raul@example.com");
+    }
+
+    private User createAndSaveUser(String email) {
         User user = new User(
-                "raul@example.com",
+                email,
                 "password",
                 UserStatus.ACTIVE
         );
 
         return userRepository.saveAndFlush(user);
+    }
+
+    private Analysis createAndSaveAnalysis(User user, String url, String domain) {
+        Analysis analysis = new Analysis(
+                "URL analyzed successfully",
+                url,
+                domain,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        user.addAnalysis(analysis);
+
+        return analysisRepository.saveAndFlush(analysis);
     }
 }

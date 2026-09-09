@@ -119,7 +119,7 @@ public class UserController {
                                     value = """
                                             {
                                                 "status": 401,
-                                                "erro": Unauthorized",
+                                                "error": "Unauthorized",
                                                 "message": "Invalid email or password",
                                                 "path": "/api/auth/login"
                                             }
@@ -203,7 +203,7 @@ public class UserController {
                                             "status": 401,
                                             "error": "Unauthorized",
                                             "message": "Authentication is required",
-                                            "path": "/api/users/me"
+                                            "path": "/api/auth/me"
                                         }
                                         """
                             )
@@ -246,6 +246,70 @@ public class UserController {
         return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, cookie.toString()).build();
     }
 
+    @Operation(
+            summary = "Change authenticated user's password",
+            description = "Changes the password of the currently authenticated user after verifying the current password."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Password changed successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Authentication required or current password is incorrect",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(
+                                    name = "Invalid current password",
+                                    value = """
+                                        {
+                                            "status": 401,
+                                            "error": "Unauthorized",
+                                            "message": "Invalid password",
+                                            "path": "/api/auth/change-password"
+                                        }
+                                        """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Authenticated user not found",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(
+                                    name = "User not found",
+                                    value = """
+                                        {
+                                            "status": 404,
+                                            "error": "Not Found",
+                                            "message": "User not found",
+                                            "path": "/api/auth/change-password"
+                                        }
+                                        """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid or malformed request",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(
+                                    name = "Malformed request",
+                                    value = """
+                                        {
+                                            "status": 400,
+                                            "error": "Bad Request",
+                                            "message": "Malformed JSON request",
+                                            "path": "/api/auth/change-password"
+                                        }
+                                        """
+                            )
+                    )
+            )
+    })
     @PostMapping("/change-password")
     public ResponseEntity<Void> changePassword(@RequestBody ChangePasswordRequest request, Authentication authentication) {
         userService.changePassword(authentication.getName(), request);

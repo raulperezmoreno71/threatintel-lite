@@ -50,10 +50,10 @@ class JwtServiceTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenTokenExpires() throws InterruptedException {
+    void shouldThrowExceptionWhenTokenExpires() {
         String secret = "7bqCs1rsC+PvKz2VJ6EWI8PGqLoLTmHuK6RE3zsKSDU=";
 
-        JwtService jwtService = new JwtService(secret, 10);
+        JwtService jwtService = new JwtService(secret, -1);
 
         User user = new User(
                 "user@example.com",
@@ -62,8 +62,6 @@ class JwtServiceTest {
         );
 
         String token = jwtService.generateToken(user);
-
-        Thread.sleep(20);
 
         assertThrows(
                 ExpiredJwtException.class,

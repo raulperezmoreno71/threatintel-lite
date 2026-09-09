@@ -1,16 +1,20 @@
 package io.github.raulperezmoreno71.threatintel.controller;
 
 import io.github.raulperezmoreno71.threatintel.config.SecurityConfig;
+import io.github.raulperezmoreno71.threatintel.dto.ChangePasswordRequest;
 import io.github.raulperezmoreno71.threatintel.dto.auth.LoginRequest;
 import io.github.raulperezmoreno71.threatintel.dto.auth.RegisterRequest;
 import io.github.raulperezmoreno71.threatintel.entity.User;
 import io.github.raulperezmoreno71.threatintel.exception.EmailAlreadyExistException;
 import io.github.raulperezmoreno71.threatintel.exception.InvalidCredentialException;
+import io.github.raulperezmoreno71.threatintel.exception.UserNotFoundException;
 import io.github.raulperezmoreno71.threatintel.model.UserStatus;
 import io.github.raulperezmoreno71.threatintel.security.CustomAuthenticationEntryPoint;
 import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
+import io.jsonwebtoken.JwtException;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -154,6 +158,53 @@ class UserControllerTest {
     }
 
     @Test
+    void shouldReturnAuthenticatedUserWhenJwtCookieIsValid() throws Exception {
+        User user = new User(
+                "user@example.com",
+                "encoded-password",
+                UserStatus.ACTIVE
+        );
+        ReflectionTestUtils.setField(user, "id", 1L);
+
+        when(jwtService.extractEmail("valid-token"))
+                .thenReturn("user@example.com");
+        when(userService.getByEmail("user@example.com"))
+                .thenReturn(user);
+
+        mockMvc.perform(
+                        get("/api/auth/me")
+                                .cookie(new Cookie("access_token", "valid-token"))
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.email").value("user@example.com"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+
+        verify(jwtService).extractEmail("valid-token");
+        verify(userService).getByEmail("user@example.com");
+    }
+
+    @Test
+    void shouldReturnJsonUnauthorizedWhenJwtCookieIsInvalid() throws Exception {
+        when(jwtService.extractEmail("invalid-token"))
+                .thenThrow(new JwtException("Invalid token"));
+
+        mockMvc.perform(
+                        get("/api/auth/me")
+                                .cookie(new Cookie("access_token", "invalid-token"))
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Authentication is required"))
+                .andExpect(jsonPath("$.path").value("/api/auth/me"));
+
+        verify(jwtService).extractEmail("invalid-token");
+        verifyNoInteractions(userService);
+    }
+
+    @Test
     void shouldReturnUnauthorizedWhenUserIsNotAuthenticated() throws Exception {
         mockMvc.perform(get("/api/auth/me"))
                 .andExpect(status().isUnauthorized())
@@ -176,5 +227,171 @@ class UserControllerTest {
                 .andExpect(cookie().secure("access_token", false))
                 .andExpect(cookie().path("access_token", "/"))
                 .andExpect(cookie().sameSite("access_token", "Lax"));
+    }
+
+    @Test
+    void shouldChangePasswordSuccessfully() throws Exception {
+        ChangePasswordRequest request = new ChangePasswordRequest(
+                "current-password",
+                "new-password"
+        );
+
+        mockMvc.perform(
+                        post("/api/auth/change-password")
+                                .with(user("user@example.com"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+
+        verify(userService).changePassword(
+                eq("user@example.com"),
+                argThat(changePasswordRequest ->
+                        "current-password".equals(changePasswordRequest.getCurrentPassword())
+                                && "new-password".equals(changePasswordRequest.getNewPassword())
+                )
+        );
+    }
+
+    @Test
+    void shouldReturnUnauthorizedWhenChangingPasswordWithoutAuthentication() throws Exception {
+        ChangePasswordRequest request = new ChangePasswordRequest(
+                "current-password",
+                "new-password"
+        );
+
+        mockMvc.perform(
+                        post("/api/auth/change-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Authentication is required"))
+                .andExpect(jsonPath("$.path").value("/api/auth/change-password"));
+
+        verifyNoInteractions(userService);
+    }
+
+    @Test
+    void shouldReturnUnauthorizedWhenCurrentPasswordIsIncorrect() throws Exception {
+        ChangePasswordRequest request = new ChangePasswordRequest(
+                "incorrect-password",
+                "new-password"
+        );
+
+        doThrow(new InvalidCredentialException("Invalid password"))
+                .when(userService)
+                .changePassword(eq("user@example.com"), any(ChangePasswordRequest.class));
+
+        mockMvc.perform(
+                        post("/api/auth/change-password")
+                                .with(user("user@example.com"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Invalid password"))
+                .andExpect(jsonPath("$.path").value("/api/auth/change-password"));
+
+        verify(userService).changePassword(
+                eq("user@example.com"),
+                any(ChangePasswordRequest.class)
+        );
+    }
+
+    @Test
+    void shouldReturnUnauthorizedWhenNewPasswordMatchesCurrentPassword() throws Exception {
+        ChangePasswordRequest request = new ChangePasswordRequest(
+                "current-password",
+                "current-password"
+        );
+
+        doThrow(new InvalidCredentialException("New password must be different from current password"))
+                .when(userService)
+                .changePassword(eq("user@example.com"), any(ChangePasswordRequest.class));
+
+        mockMvc.perform(
+                        post("/api/auth/change-password")
+                                .with(user("user@example.com"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("New password must be different from current password"))
+                .andExpect(jsonPath("$.path").value("/api/auth/change-password"));
+
+        verify(userService).changePassword(
+                eq("user@example.com"),
+                any(ChangePasswordRequest.class)
+        );
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenChangingPasswordForUnknownUser() throws Exception {
+        ChangePasswordRequest request = new ChangePasswordRequest(
+                "current-password",
+                "new-password"
+        );
+
+        doThrow(new UserNotFoundException("User not found"))
+                .when(userService)
+                .changePassword(eq("missing@example.com"), any(ChangePasswordRequest.class));
+
+        mockMvc.perform(
+                        post("/api/auth/change-password")
+                                .with(user("missing@example.com"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("User not found"))
+                .andExpect(jsonPath("$.path").value("/api/auth/change-password"));
+
+        verify(userService).changePassword(
+                eq("missing@example.com"),
+                any(ChangePasswordRequest.class)
+        );
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenChangePasswordJsonIsMalformed() throws Exception {
+        mockMvc.perform(
+                        post("/api/auth/change-password")
+                                .with(user("user@example.com"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{")
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Malformed JSON request"))
+                .andExpect(jsonPath("$.path").value("/api/auth/change-password"));
+
+        verifyNoInteractions(userService);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenChangePasswordBodyIsMissing() throws Exception {
+        mockMvc.perform(
+                        post("/api/auth/change-password")
+                                .with(user("user@example.com"))
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Malformed JSON request"))
+                .andExpect(jsonPath("$.path").value("/api/auth/change-password"));
+
+        verifyNoInteractions(userService);
     }
 }

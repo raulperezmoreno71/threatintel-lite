@@ -1,13 +1,20 @@
 package io.github.raulperezmoreno71.threatintel.controller;
 
+import io.github.raulperezmoreno71.threatintel.config.SecurityConfig;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeRequest;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeResponse;
+import io.github.raulperezmoreno71.threatintel.security.CustomAuthenticationEntryPoint;
+import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
 import io.github.raulperezmoreno71.threatintel.service.AnalyzeService;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -16,11 +23,16 @@ import tools.jackson.databind.ObjectMapper;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AnalyzeController.class)
+@ImportAutoConfiguration({ServletWebSecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, CustomAuthenticationEntryPoint.class})
 class AnalyzeControllerTest {
 
     @Autowired
@@ -34,12 +46,6 @@ class AnalyzeControllerTest {
 
     @MockitoBean
     private JwtService jwtService;
-
-    @BeforeEach
-    void setUp() {
-        when(jwtService.extractEmail("test-token"))
-                .thenReturn("test@example.com");
-    }
 
     @Test
     void shouldReturnOkWhenUrlIsAnalyzedSuccessfully() throws Exception {
@@ -61,7 +67,7 @@ class AnalyzeControllerTest {
 
         mockMvc.perform(
                         post("/api/analyze")
-                                .header("Authorization", "Bearer test-token")
+                                .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
                 )
@@ -97,7 +103,7 @@ class AnalyzeControllerTest {
 
         mockMvc.perform(
                         post("/api/analyze")
-                                .header("Authorization", "Bearer test-token")
+                                .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
                 )
@@ -135,7 +141,7 @@ class AnalyzeControllerTest {
 
         mockMvc.perform(
                         post("/api/analyze")
-                                .header("Authorization", "Bearer test-token")
+                                .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
                 )
@@ -168,7 +174,7 @@ class AnalyzeControllerTest {
 
         mockMvc.perform(
                         post("/api/analyze")
-                                .header("Authorization", "Bearer test-token")
+                                .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(invalidJason)
                 )
@@ -193,10 +199,66 @@ class AnalyzeControllerTest {
     void shouldReturnBadRequestWhenRequestBodyIsMissing() throws Exception {
         mockMvc.perform(
                         post("/api/analyze")
-                                .header("Authorization", "Bearer test-token")
+                                .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                 )
                 .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(analyzeService);
+    }
+
+    @Test
+    void shouldReturnUnauthorizedWhenUserIsNotAuthenticated() throws Exception {
+        AnalyzeRequest request = new AnalyzeRequest("https://example.com");
+
+        mockMvc.perform(
+                        post("/api/analyze")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Authentication is required"))
+                .andExpect(jsonPath("$.path").value("/api/analyze"));
+
+        verifyNoInteractions(analyzeService);
+    }
+
+    @Test
+    void shouldAllowPreflightRequestFromConfiguredFrontendOrigin() throws Exception {
+        mockMvc.perform(
+                        options("/api/analyze")
+                                .header(HttpHeaders.ORIGIN, "http://localhost:5173")
+                                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Content-Type")
+                )
+                .andExpect(status().isOk())
+                .andExpect(header().string(
+                        HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        "http://localhost:5173"
+                ))
+                .andExpect(header().string(
+                        HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS,
+                        "GET,POST,DELETE,OPTIONS"
+                ))
+                .andExpect(header().string(
+                        HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        "true"
+                ));
+
+        verifyNoInteractions(analyzeService);
+    }
+
+    @Test
+    void shouldRejectPreflightRequestFromUnknownOrigin() throws Exception {
+        mockMvc.perform(
+                        options("/api/analyze")
+                                .header(HttpHeaders.ORIGIN, "https://unknown.example")
+                                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                )
+                .andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
 
         verifyNoInteractions(analyzeService);
     }

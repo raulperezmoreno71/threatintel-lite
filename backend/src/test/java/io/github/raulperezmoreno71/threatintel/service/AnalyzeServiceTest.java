@@ -2,23 +2,16 @@ package io.github.raulperezmoreno71.threatintel.service;
 
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeRequest;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeResponse;
-import io.github.raulperezmoreno71.threatintel.entity.Analysis;
-import io.github.raulperezmoreno71.threatintel.entity.User;
 import io.github.raulperezmoreno71.threatintel.model.*;
-import io.github.raulperezmoreno71.threatintel.repository.AnalysisRepository;
-import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.net.http.HttpResponse;
-import java.util.Collections;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 class AnalyzeServiceTest {
@@ -107,5 +100,133 @@ class AnalyzeServiceTest {
                 securityHeadersAnalyzer,
                 securityAssessmentCalculator
         );
+    }
+
+    @Test
+    void shouldStopAnalysisWhenUrlValidationFails() {
+        AnalyzeRequest request = new AnalyzeRequest("invalid-url");
+        IllegalArgumentException failure = new IllegalArgumentException("Invalid URL");
+        doThrow(failure).when(urlValidator).validate("invalid-url");
+
+        IllegalArgumentException thrown = assertThrows(
+                IllegalArgumentException.class,
+                () -> analyzeService.analyze(request)
+        );
+
+        assertSame(failure, thrown);
+        verify(urlValidator).validate("invalid-url");
+        verifyNoInteractions(
+                dnsAnalyzer,
+                httpAnalyzer,
+                sslAnalyzer,
+                securityHeadersAnalyzer,
+                securityAssessmentCalculator
+        );
+    }
+
+    @Test
+    void shouldStopAnalysisWhenDnsAnalysisFails() {
+        AnalyzeRequest request = new AnalyzeRequest("https://example.com");
+        RuntimeException failure = new RuntimeException("DNS analysis failed");
+        when(dnsAnalyzer.analyze("example.com")).thenThrow(failure);
+
+        RuntimeException thrown = assertThrows(
+                RuntimeException.class,
+                () -> analyzeService.analyze(request)
+        );
+
+        assertSame(failure, thrown);
+        verify(urlValidator).validate("https://example.com");
+        verify(dnsAnalyzer).analyze("example.com");
+        verifyNoInteractions(
+                httpAnalyzer,
+                sslAnalyzer,
+                securityHeadersAnalyzer,
+                securityAssessmentCalculator
+        );
+    }
+
+    @Test
+    void shouldStopAnalysisWhenHttpRequestFails() {
+        AnalyzeRequest request = new AnalyzeRequest("https://example.com");
+        DnsAnalysisResult dnsAnalysisResult = mock(DnsAnalysisResult.class);
+        RuntimeException failure = new RuntimeException("HTTP analysis failed");
+        when(dnsAnalyzer.analyze("example.com")).thenReturn(dnsAnalysisResult);
+        when(httpAnalyzer.followRedirects("https://example.com")).thenThrow(failure);
+
+        RuntimeException thrown = assertThrows(
+                RuntimeException.class,
+                () -> analyzeService.analyze(request)
+        );
+
+        assertSame(failure, thrown);
+        verify(urlValidator).validate("https://example.com");
+        verify(dnsAnalyzer).analyze("example.com");
+        verify(httpAnalyzer).followRedirects("https://example.com");
+        verifyNoMoreInteractions(httpAnalyzer);
+        verifyNoInteractions(
+                sslAnalyzer,
+                securityHeadersAnalyzer,
+                securityAssessmentCalculator
+        );
+    }
+
+    @Test
+    void shouldStopAnalysisWhenSslAnalysisFails() {
+        AnalyzeRequest request = new AnalyzeRequest("https://example.com");
+        DnsAnalysisResult dnsAnalysisResult = mock(DnsAnalysisResult.class);
+        HttpRedirectResult redirectResult = mock(HttpRedirectResult.class);
+        HttpAnalysisResult httpAnalysisResult = mock(HttpAnalysisResult.class);
+        RuntimeException failure = new RuntimeException("SSL analysis failed");
+
+        when(dnsAnalyzer.analyze("example.com")).thenReturn(dnsAnalysisResult);
+        when(httpAnalyzer.followRedirects("https://example.com")).thenReturn(redirectResult);
+        when(httpAnalyzer.analyzeResponse(redirectResult)).thenReturn(httpAnalysisResult);
+        when(httpAnalysisResult.getFinalUrl()).thenReturn("https://www.example.com/home");
+        when(sslAnalyzer.analyze("https://www.example.com/home", "www.example.com"))
+                .thenThrow(failure);
+
+        RuntimeException thrown = assertThrows(
+                RuntimeException.class,
+                () -> analyzeService.analyze(request)
+        );
+
+        assertSame(failure, thrown);
+        verify(urlValidator).validate("https://example.com");
+        verify(dnsAnalyzer).analyze("example.com");
+        verify(httpAnalyzer).followRedirects("https://example.com");
+        verify(httpAnalyzer).analyzeResponse(redirectResult);
+        verify(sslAnalyzer).analyze("https://www.example.com/home", "www.example.com");
+        verifyNoInteractions(securityHeadersAnalyzer, securityAssessmentCalculator);
+    }
+
+    @Test
+    void shouldCompleteHttpAnalysisWithoutSslResult() {
+        AnalyzeRequest request = new AnalyzeRequest("http://example.com");
+        DnsAnalysisResult dnsAnalysisResult = mock(DnsAnalysisResult.class);
+        HttpRedirectResult redirectResult = mock(HttpRedirectResult.class);
+        HttpAnalysisResult httpAnalysisResult = mock(HttpAnalysisResult.class);
+        SecurityHeadersAnalysisResult headersResult = mock(SecurityHeadersAnalysisResult.class);
+        SecurityAssessmentResult assessmentResult = mock(SecurityAssessmentResult.class);
+        HttpResponse<String> finalResponse = mock(HttpResponse.class);
+
+        when(dnsAnalyzer.analyze("example.com")).thenReturn(dnsAnalysisResult);
+        when(httpAnalyzer.followRedirects("http://example.com")).thenReturn(redirectResult);
+        when(httpAnalyzer.analyzeResponse(redirectResult)).thenReturn(httpAnalysisResult);
+        when(httpAnalysisResult.getFinalUrl()).thenReturn("http://example.com");
+        when(sslAnalyzer.analyze("http://example.com", "example.com")).thenReturn(null);
+        when(redirectResult.getFinalResponse()).thenReturn(finalResponse);
+        when(securityHeadersAnalyzer.analyze(finalResponse)).thenReturn(headersResult);
+        when(securityAssessmentCalculator.calculate(headersResult)).thenReturn(assessmentResult);
+
+        AnalyzeResponse response = analyzeService.analyze(request);
+
+        assertEquals("http://example.com", response.getUrl());
+        assertNull(response.getSsl());
+        assertSame(headersResult, response.getSecurityHeaders());
+        assertSame(assessmentResult, response.getSecurityAssessment());
+        verify(sslAnalyzer).analyze("http://example.com", "example.com");
+        verify(securityHeadersAnalyzer).analyze(finalResponse);
+        verify(securityAssessmentCalculator).calculate(headersResult);
     }
 }

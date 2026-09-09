@@ -11,11 +11,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({
-            AnalysisNotFoundException.class,
-            UserNotFoundException.class
-    })
+    @ExceptionHandler(AnalysisNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleAnalysisNotFoundException(AnalysisNotFoundException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                request
+        );
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleAnalysisNotFoundException(UserNotFoundException exception, HttpServletRequest request) {
         return buildErrorResponse(
                 HttpStatus.NOT_FOUND,
                 exception.getMessage(),

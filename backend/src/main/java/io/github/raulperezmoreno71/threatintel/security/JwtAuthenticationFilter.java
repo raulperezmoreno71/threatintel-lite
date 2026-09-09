@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -19,9 +20,11 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(JwtService jwtService, CustomAuthenticationEntryPoint authenticationEntryPoint) {
         this.jwtService = jwtService;
+        this.authenticationEntryPoint = authenticationEntryPoint;
     }
 
     @Override
@@ -49,7 +52,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (JwtException | IllegalArgumentException exception) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            SecurityContextHolder.clearContext();
+
+            authenticationEntryPoint.commence(request, response, new BadCredentialsException("Invalid token", exception));
             return;
         }
 

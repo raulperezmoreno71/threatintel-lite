@@ -1,15 +1,16 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
 import io.github.raulperezmoreno71.threatintel.dto.AnalysisHistoryResponse;
+import io.github.raulperezmoreno71.threatintel.dto.SaveAnalysisRequest;
 import io.github.raulperezmoreno71.threatintel.entity.*;
 import io.github.raulperezmoreno71.threatintel.exception.AnalysisNotFoundException;
-import io.github.raulperezmoreno71.threatintel.model.SecurityStatus;
-import io.github.raulperezmoreno71.threatintel.model.SslStatus;
+import io.github.raulperezmoreno71.threatintel.model.*;
 import io.github.raulperezmoreno71.threatintel.repository.AnalysisRepository;
 import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -357,5 +358,236 @@ class AnalysisHistoryServiceTest {
 
         verify(analysisRepository)
                 .findByIdAndUser(1L, user);
+    }
+
+    @Test
+    void shouldSaveCompleteHttpsAnalysis() {
+        User authenticatedUser = new User(
+                "test@example.com",
+                "encoded-password",
+                UserStatus.ACTIVE
+        );
+        SaveAnalysisRequest request = createSaveAnalysisRequest(
+                new SslAnalysisResult(
+                        "Let's Encrypt",
+                        "example.com",
+                        LocalDate.of(2026, 7, 1),
+                        LocalDate.of(2026, 10, 1),
+                        46,
+                        SslStatus.GOOD,
+                        null
+                )
+        );
+
+        when(userRepository.findByEmail("test@example.com"))
+                .thenReturn(Optional.of(authenticatedUser));
+
+        analysisHistoryService.saveAnalysis(request);
+
+        ArgumentCaptor<Analysis> analysisCaptor =
+                ArgumentCaptor.forClass(Analysis.class);
+
+        verify(analysisRepository).save(analysisCaptor.capture());
+
+        Analysis savedAnalysis = analysisCaptor.getValue();
+
+        assertEquals("URL analyzed successfully", savedAnalysis.getMessage());
+        assertEquals("https://example.com", savedAnalysis.getUrl());
+        assertEquals("example.com", savedAnalysis.getDomain());
+        assertSame(authenticatedUser, savedAnalysis.getUser());
+        assertTrue(authenticatedUser.getAnalyses().contains(savedAnalysis));
+
+        assertEquals(
+                List.of("93.184.216.34", "93.184.216.35"),
+                savedAnalysis.getDnsAnalysis().getIps()
+        );
+
+        HttpAnalysis savedHttp = savedAnalysis.getHttpAnalysis();
+
+        assertEquals(200, savedHttp.getStatusCode());
+        assertEquals("text/html", savedHttp.getContentType());
+        assertEquals("nginx", savedHttp.getServer());
+        assertEquals(1500L, savedHttp.getContentLength());
+        assertEquals("https://example.com", savedHttp.getFinalUrl());
+        assertEquals(120L, savedHttp.getTotalResponseTimeMs());
+        assertEquals(2, savedHttp.getRedirectChain().size());
+
+        RedirectStepEntity firstRedirect = savedHttp.getRedirectChain().get(0);
+
+        assertEquals("http://example.com", firstRedirect.getUrl());
+        assertEquals(301, firstRedirect.getStatusCode());
+        assertEquals("https://example.com", firstRedirect.getLocation());
+        assertEquals(50L, firstRedirect.getResponseTimeMs());
+
+        for (RedirectStepEntity redirect : savedHttp.getRedirectChain()) {
+            assertSame(savedHttp, redirect.getHttpAnalysis());
+        }
+
+        SslAnalysis savedSsl = savedAnalysis.getSslAnalysis();
+
+        assertNotNull(savedSsl);
+        assertEquals("Let's Encrypt", savedSsl.getIssuer());
+        assertEquals("example.com", savedSsl.getSubject());
+        assertEquals(LocalDate.of(2026, 7, 1), savedSsl.getValidFrom());
+        assertEquals(LocalDate.of(2026, 10, 1), savedSsl.getValidUntil());
+        assertEquals(46L, savedSsl.getDaysUntilExpiration());
+        assertEquals(SslStatus.GOOD, savedSsl.getStatus());
+        assertNull(savedSsl.getRecommendation());
+
+        SecurityHeadersAnalysis savedHeaders =
+                savedAnalysis.getSecurityHeadersAnalysis();
+
+        assertEquals(6, savedHeaders.getHeaders().size());
+        assertEquals(
+                List.of(
+                        "Strict-Transport-Security",
+                        "Content-Security-Policy",
+                        "X-Frame-Options",
+                        "X-Content-Type-Options",
+                        "Referrer-Policy",
+                        "Permissions-Policy"
+                ),
+                savedHeaders.getHeaders().stream()
+                        .map(SecurityHeaderResultEntity::getHeaderName)
+                        .toList()
+        );
+
+        for (SecurityHeaderResultEntity header : savedHeaders.getHeaders()) {
+            assertTrue(header.isPresent());
+            assertEquals(SecurityStatus.GOOD, header.getStatus());
+            assertNull(header.getRecommendation());
+            assertSame(savedHeaders, header.getSecurityHeadersAnalysis());
+        }
+
+        SecurityAssessmentEntity savedAssessment =
+                savedAnalysis.getSecurityAssessmentAnalysis();
+
+        assertEquals(100, savedAssessment.getScore());
+        assertEquals("A", savedAssessment.getGrade());
+        assertEquals(6, savedAssessment.getGoodHeaders());
+        assertEquals(0, savedAssessment.getWarningHeaders());
+        assertEquals(0, savedAssessment.getMissingHeaders());
+
+        verify(userRepository).findByEmail("test@example.com");
+    }
+
+    @Test
+    void shouldSaveHttpAnalysisWithoutSsl() {
+        User authenticatedUser = new User(
+                "test@example.com",
+                "encoded-password",
+                UserStatus.ACTIVE
+        );
+        SaveAnalysisRequest request = createSaveAnalysisRequest(null);
+
+        request.setUrl("http://example.com");
+
+        when(userRepository.findByEmail("test@example.com"))
+                .thenReturn(Optional.of(authenticatedUser));
+
+        analysisHistoryService.saveAnalysis(request);
+
+        ArgumentCaptor<Analysis> analysisCaptor =
+                ArgumentCaptor.forClass(Analysis.class);
+
+        verify(analysisRepository).save(analysisCaptor.capture());
+
+        Analysis savedAnalysis = analysisCaptor.getValue();
+
+        assertEquals("http://example.com", savedAnalysis.getUrl());
+        assertNull(savedAnalysis.getSslAnalysis());
+        assertNotNull(savedAnalysis.getDnsAnalysis());
+        assertNotNull(savedAnalysis.getHttpAnalysis());
+        assertNotNull(savedAnalysis.getSecurityHeadersAnalysis());
+        assertNotNull(savedAnalysis.getSecurityAssessmentAnalysis());
+        assertSame(authenticatedUser, savedAnalysis.getUser());
+        assertTrue(authenticatedUser.getAnalyses().contains(savedAnalysis));
+
+        verify(userRepository).findByEmail("test@example.com");
+    }
+
+    @Test
+    void shouldNotSaveAnalysisWhenAuthenticatedUserDoesNotExist() {
+        SaveAnalysisRequest request = mock(SaveAnalysisRequest.class);
+
+        when(userRepository.findByEmail("test@example.com"))
+                .thenReturn(Optional.empty());
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> analysisHistoryService.saveAnalysis(request)
+        );
+
+        assertEquals("Authenticated user not found", exception.getMessage());
+
+        verify(userRepository).findByEmail("test@example.com");
+        verifyNoInteractions(request);
+        verify(analysisRepository, never()).save(any(Analysis.class));
+    }
+
+    private SaveAnalysisRequest createSaveAnalysisRequest(SslAnalysisResult ssl) {
+        DnsAnalysisResult dns = new DnsAnalysisResult(
+                List.of("93.184.216.34", "93.184.216.35")
+        );
+
+        HttpAnalysisResult http = new HttpAnalysisResult(
+                200,
+                "text/html",
+                "nginx",
+                1500L,
+                "https://example.com",
+                120L,
+                List.of(
+                        new RedirectStep(
+                                "http://example.com",
+                                301,
+                                "https://example.com",
+                                50L
+                        ),
+                        new RedirectStep(
+                                "https://example.com",
+                                200,
+                                null,
+                                70L
+                        )
+                )
+        );
+
+        SecurityHeaderResult goodHeader = new SecurityHeaderResult(
+                true,
+                "valid-value",
+                SecurityStatus.GOOD,
+                null
+        );
+
+        SecurityHeadersAnalysisResult securityHeaders =
+                new SecurityHeadersAnalysisResult(
+                        goodHeader,
+                        goodHeader,
+                        goodHeader,
+                        goodHeader,
+                        goodHeader,
+                        goodHeader
+                );
+
+        SecurityAssessmentResult securityAssessment =
+                new SecurityAssessmentResult(
+                        100,
+                        "A",
+                        6,
+                        0,
+                        0
+                );
+
+        return new SaveAnalysisRequest(
+                "URL analyzed successfully",
+                "https://example.com",
+                "example.com",
+                dns,
+                http,
+                ssl,
+                securityHeaders,
+                securityAssessment
+        );
     }
 }

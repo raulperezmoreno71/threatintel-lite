@@ -7,6 +7,8 @@ import io.github.raulperezmoreno71.threatintel.model.HttpRedirectResult;
 import io.github.raulperezmoreno71.threatintel.model.RedirectStep;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -117,8 +119,9 @@ class HttpAnalyzerTest {
         assertNull(result.getServer());
     }
 
-    @Test
-    void shouldReturnAValidRedirectWhenThereIsOnlyOneRedirection() throws Exception {
+    @ParameterizedTest
+    @ValueSource(ints = {301, 302, 303, 307, 308})
+    void shouldFollowEverySupportedRedirectStatus(int redirectStatus) throws Exception {
         HttpResponse<String> redirectResponse = mock(HttpResponse.class);
         HttpResponse<String> finalResponse = mock(HttpResponse.class);
 
@@ -135,7 +138,7 @@ class HttpAnalyzerTest {
                 (name, value) -> true
         );
 
-        when(redirectResponse.statusCode()).thenReturn(301);
+        when(redirectResponse.statusCode()).thenReturn(redirectStatus);
         when(redirectResponse.headers()).thenReturn(redirectHeaders);
 
         when(finalResponse.statusCode()).thenReturn(200);
@@ -158,7 +161,7 @@ class HttpAnalyzerTest {
         RedirectStep secondStep = result.getRedirectChain().get(1);
 
         assertEquals("http://example.com", firstStep.getUrl());
-        assertEquals(301, firstStep.getStatusCode());
+        assertEquals(redirectStatus, firstStep.getStatusCode());
         assertEquals("https://example.com", firstStep.getLocation());
 
         assertEquals("https://example.com", secondStep.getUrl());
@@ -166,6 +169,53 @@ class HttpAnalyzerTest {
         assertNull(secondStep.getLocation());
 
         assertSame(finalResponse, result.getFinalResponse());
+    }
+
+    @Test
+    void shouldStopWhenRedirectResponseHasNoLocationHeader() throws Exception {
+        HttpResponse<String> response = mock(HttpResponse.class);
+        HttpHeaders headers = HttpHeaders.of(Map.of(), (name, value) -> true);
+
+        when(response.statusCode()).thenReturn(302);
+        when(response.headers()).thenReturn(headers);
+        when(httpClient.send(
+                any(HttpRequest.class),
+                any(HttpResponse.BodyHandler.class)
+        )).thenReturn(response);
+
+        HttpRedirectResult result = httpAnalyzer.followRedirects("https://example.com/start");
+
+        assertEquals(1, result.getRedirectChain().size());
+        assertEquals("https://example.com/start", result.getRedirectChain().get(0).getUrl());
+        assertEquals(302, result.getRedirectChain().get(0).getStatusCode());
+        assertNull(result.getRedirectChain().get(0).getLocation());
+        assertSame(response, result.getFinalResponse());
+        verify(httpClient).send(
+                any(HttpRequest.class),
+                any(HttpResponse.BodyHandler.class)
+        );
+    }
+
+    @Test
+    void shouldRejectNonNumericContentLength() {
+        HttpResponse<String> response = mock(HttpResponse.class);
+        HttpHeaders headers = HttpHeaders.of(
+                Map.of("Content-Length", List.of("not-a-number")),
+                (name, value) -> true
+        );
+        HttpRedirectResult redirectResult = new HttpRedirectResult(
+                response,
+                List.of(new RedirectStep("https://example.com", 200, null, 10)),
+                10
+        );
+
+        when(response.statusCode()).thenReturn(200);
+        when(response.headers()).thenReturn(headers);
+
+        assertThrows(
+                NumberFormatException.class,
+                () -> httpAnalyzer.analyzeResponse(redirectResult)
+        );
     }
 
     @Test
@@ -277,6 +327,12 @@ class HttpAnalyzerTest {
         assertNull(secondStep.getLocation());
 
         assertSame(finalResponse, result.getFinalResponse());
+
+        long accumulatedTime = result.getRedirectChain().stream()
+                .mapToLong(RedirectStep::getResponseTimeMs)
+                .sum();
+        assertEquals(accumulatedTime, result.getTotalResponseTimeMs());
+        assertTrue(result.getTotalResponseTimeMs() >= 0);
 
         verify(httpClient, times(2)).send(
                 any(HttpRequest.class),
