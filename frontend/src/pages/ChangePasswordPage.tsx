@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { SubmitEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import './ChangePasswordPage.css'
-import { changePassword } from '../api/AuthApi'
+import { changePassword, getCurrentUser } from '../api/AuthApi'
 
 function ChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState('')
@@ -12,6 +12,23 @@ function ChangePasswordPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const passwordsDoNotMatch = newPasswordConfirmation !== '' && newPassword !== newPasswordConfirmation
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    getCurrentUser()
+    .catch(error => {
+      if (error.message === 'UNAUTHORIZED') {
+        navigate('/login', {
+          state: {
+            message: 'Tu sesión ha caducado. Vuelve a iniciar sesión.'
+          }
+        })
+        return
+      }
+
+      setError(error.message)
+    })
+  }, [navigate])
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()

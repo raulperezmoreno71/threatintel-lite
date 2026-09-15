@@ -1,314 +1,311 @@
 # ThreatIntel Lite
 
-![Tests](https://github.com/raulperezmoreno71/threatintel-lite/actions/workflows/tests.yml/badge.svg)
+[![Backend tests](https://github.com/raulperezmoreno71/threatintel-lite/actions/workflows/tests.yml/badge.svg)](https://github.com/raulperezmoreno71/threatintel-lite/actions/workflows/tests.yml)
 
-## Overview
+ThreatIntel Lite is a full-stack web application that analyzes the technical security posture of a URL and presents the result as a structured, readable report.
 
-ThreatIntel Lite is a REST API built with Spring Boot that analyzes different aspects of a URL and evaluates its HTTP security configuration. The results are grouped into dedicated analysis modules, including DNS resolution, HTTP behavior, SSL/TLS certificate information and HTTP security header assessment.
+The application combines a Java 21 and Spring Boot REST API with a React and TypeScript client. Authenticated users can run URL analyses, inspect DNS, HTTP, redirect, TLS and security-header information, calculate an overall score, and save selected reports to a private history backed by PostgreSQL.
 
-Analysis results are also persisted in a PostgreSQL database using Spring Data JPA and Hibernate, allowing previous analyses to be stored for future retrieval. The application also includes user account persistence and a registration flow with secure password hashing using Spring Security.
+> [!IMPORTANT]
+> ThreatIntel Lite provides a lightweight technical assessment based on publicly observable URL, certificate and HTTP-header information. It is not a vulnerability scanner, penetration-testing tool or substitute for a professional security audit.
 
-The project is designed to explore how backend applications interact with Internet protocols such as DNS and HTTP while following clean architecture principles and modern Java development practices. 
+## Version 1 overview
 
-Rather than only collecting HTTP metadata, ThreatIntel Lite also evaluates the security posture of a target website by inspecting common security headers and providing actionable recommendations.
+The first consolidated version includes the complete user journey:
 
-The API also produces an overall HTTP security header assessment by calculating a weighted score and assigning a security grade based on the analyzed headers.
+1. Create an account and sign in.
+2. Submit an HTTP or HTTPS URL.
+3. Run the DNS, HTTP, redirect, TLS and security-header analysis.
+4. Review the score, grade and recommendations in the web interface.
+5. Save selected results to a user-owned history.
+6. Reopen stored analyses from the private history.
+7. Change the account password and close the session.
 
-ThreatIntel Lite is being developed incrementally, with each feature focusing on understanding a specific backend or networking concept rather than simply adding functionality.
+Authentication is handled with a signed JWT stored in an HttpOnly cookie. Protected backend resources are scoped to the authenticated user, so saved analyses cannot be retrieved or deleted through another account.
 
-## Analysis Workflow
+## Main features
 
-```text
-                User Request
-                     │
-                     ▼
-               URL Validation
-                     │
-                     ▼
-             Domain Extraction
-                     │
-                     ▼
-┌──────────────────────────────────────────────┐
-│              Analysis Modules                │
-├──────────────────────────────────────────────┤
-│                                              │
-│  DNS Analysis                                │
-│      └── Resolve IP addresses                │
-│                                              │
-│  HTTP Analysis                               │
-│      ├── Redirect chain                      │
-│      ├── Status code                         │
-│      ├── Content-Type                        │
-│      ├── Server                              │
-│      ├── Content-Length                      │
-│      └── Response time                       │
-│                                              │
-│  SSL/TLS Analysis                            │
-│      ├── Issuer                              │
-│      ├── Subject                             │
-│      ├── Validity period                     │
-│      ├── Days until expiration               │
-│      ├── Certificate status                  │
-│      └── Renewal recommendation              │
-│                                              │
-│  Security Headers Assessment                 │
-│      ├── Strict-Transport-Security           │
-│      ├── Content-Security-Policy             │
-│      ├── X-Frame-Options                     │
-│      ├── X-Content-Type-Options              │
-│      ├── Referrer-Policy                     │
-│      └── Permissions-Policy                  │
-│                                              │
-│  Security Assessment                         │
-│      ├── Security score                      │
-│      ├── Security grade                      │
-│      └── Header summary                      │
-│                                              │
-└──────────────────────────────────────────────┘
-                     │
-                     ▼
-               Analysis Results
-                     │
-          ┌──────────┴──────────┐
-          │                     │
-          ▼                     ▼
-   JPA Entity Mapping     Structured JSON
-          │                  Response
-          ▼
-   Spring Data JPA
-          │
-          ▼
-      Hibernate
-          │
-          ▼
-      PostgreSQL
-```
+### URL intelligence
 
-ThreatIntel Lite processes each URL through independent analysis modules and combines their results into a single structured JSON response.
+- HTTP and HTTPS URL validation.
+- Domain extraction and DNS resolution.
+- Collection of all resolved IP addresses.
+- Manual redirect tracking for `301`, `302`, `303`, `307` and `308` responses.
+- Relative redirect resolution and a maximum redirect limit.
+- Final HTTP status, URL, content type, server and declared content length.
+- Response time for each request and for the complete redirect chain.
 
-## Features
+### TLS certificate analysis
 
- - [x] Validate HTTP and HTTPS URLs.
- - [x] Extract the domain from a URL.
- - [x] Resolve all available IP addresses through DNS.
- - [x] Retrieve the HTTP status code.
- - [x] Detect the response Content-Type.
- - [x] Identify the responding web server.
- - [x] Retrieve the declared Content-Length header.
- - [x] Measure the total HTTP response time.
- - [x] Handle invalid requests through global exception handling.
- - [x] Analyze SSL/TLS certificates.
- - [x] Retrieve certificate issuer and subject.
- - [x] Retrieve certificate validity dates.
- - [x] Calculate remaining days until certificate expiration.
- - [x] Analyze and evaluate common HTTP security headers.
- - [x] Classify each security header as GOOD, WARNING or MISSING.
- - [x] Provide security recommendations for each analyzed header.
- - [x] Calculate an overall website security score.
- - [x] Assign an overall security grade (A-F).
- - [x] Return structured JSON responses grouped by analysis module.
- - [x] Follow HTTP redirect chains manually.
- - [x] Measure response time for each redirect.
- - [x] Identify the final destination URL.
- - [x] Classify SSL certificates as GOOD, WARNING or CRITICAL.
- - [x] Follow a clean layered architecture (Controller, Service, DTO and Exception Handler).
- - [x] Interactive API documentation with swagger UI.
- - [x] OpenAPI 3 specification generation.
- - [x] Persist complete URL analysis results using PostgreSQL.
- - [x] Map analysis data to relational entities using Spring Data JPA and Hibernate.
- - [x] Model one-to-one and one-to-many relationships between analysis modules.
- - [x] Retrieve persisted analyses by ID.
- - [x] Retrieve all persisted analyses.
- - [x] Delete persisted analyses by ID.
- - [x] Map persisted JPA entities to structured API responses.
- - [x] Persist user accounts using PostgreSQL.
- - [x] Associate persisted analyses with users.
- - [x] Register new users through a dedicated REST endpoint.
- - [x] Hash user passwords using Spring Security PasswordEncoder.
- - [x] Prevent duplicate user registration by email.
- - [x] Return structured 409 Conflict responses for duplicate emails.
- - [x] Authenticate users with email and password.
- - [x] Generate JWT access tokens after successful login.
- - [x] Configure JWT expiration and signing secret through application configuration.
+- Certificate issuer and subject.
+- Validity start and end dates.
+- Remaining days until expiration.
+- `GOOD`, `WARNING` or `CRITICAL` classification.
+- Renewal recommendation when the certificate is close to expiration or expired.
+- Explicit timeout, handshake and general TLS error handling.
 
-## Tech Stack
+TLS analysis is omitted for plain HTTP destinations.
 
- - **Language:** Java 21
- - **Framework:** Spring Boot
- - **Security:** Spring Security, Password Encoder, JWT
- - **Persistence:** Spring Data JPA, Hibernate
- - **Database:** PostgreSQL
- - **Build Tool:** Maven
- - **Networking:** Java HttpClient, JSSE (SSL/TLS)
- - **JSON Serialization:** Jackson
- - **Version Control:** Git
- - **Repository Hosting:** GitHub
- - **API Documentation:** SpringDoc OpenAPI (Swagger UI)
- - **Testing:** JUnit 5, Mockito, Spring MockMvc, TestContainers
- - **Containerization:** Docker
- - **CI:** GitHub Actions
+### HTTP security assessment
 
-## Project Structure
+ThreatIntel Lite evaluates six response headers:
+
+- `Strict-Transport-Security`
+- `Content-Security-Policy`
+- `X-Frame-Options`
+- `X-Content-Type-Options`
+- `Referrer-Policy`
+- `Permissions-Policy`
+
+Every header receives a status, its detected value and an actionable recommendation when improvement is needed. The results are combined into a weighted score and an overall grade.
+
+| Grade | Score |
+|:-----:|------:|
+| A | 90–100 |
+| B | 80–89 |
+| C | 70–79 |
+| D | 60–69 |
+| F | 0–59 |
+
+### Accounts and private history
+
+- User registration with unique email addresses.
+- Password hashing through Spring Security's `PasswordEncoder`.
+- Credential-based login.
+- JWT authentication through an HttpOnly `access_token` cookie.
+- Current-user endpoint and protected application routes.
+- Password changes after verifying the current password.
+- Explicit logout through cookie invalidation.
+- Complete analysis persistence in PostgreSQL.
+- Per-user listing, detail and deletion of stored reports.
+
+### Web experience
+
+- Responsive public landing page.
+- Registration and login forms.
+- Authenticated analysis dashboard.
+- Detailed presentation of every analysis module.
+- Save/discard workflow for newly generated reports.
+- Private analysis history and report detail views.
+- Loading, empty, success and error states.
+- Semantic HTML, keyboard focus styles and accessible status messages.
+- Reduced-motion support for users who request it.
+
+## Architecture
+
+The repository contains two independent applications:
 
 ```text
-backend
-├── .mvn
-├── pom.xml
-├── mvnw
-├── mvnw.cmd
-├── request.http
-└── src
-    └── main
-        └── java
-            └── io.github.raulperezmoreno71.threatintel
-                ├── config
-                ├── controller
-                ├── dto
-                ├── entity
-                ├── exception
-                ├── model
-                ├── repository
-                ├── security
-                └── service
+threatintel-lite/
+├── backend/     Java 21 + Spring Boot REST API
+├── frontend/    React + TypeScript + Vite client
+├── .github/     Continuous integration workflows
+└── README.md
 ```
 
-### `controller`
+### Request flow
 
-Receives incoming HTTP requests, delegates the processing to the service layer and returns the API response.
+```text
+React client
+    │
+    │ JSON over HTTP + HttpOnly authentication cookie
+    ▼
+Spring Security / JWT filter
+    │
+    ▼
+REST controllers
+    │
+    ├── Account service ───────────────► User repository
+    │
+    ├── Analysis coordinator
+    │       ├── URL validation
+    │       ├── DNS analysis
+    │       ├── HTTP and redirects
+    │       ├── TLS certificate analysis
+    │       └── Security-header scoring
+    │
+    └── Analysis history service ─────► Analysis repository
+                                            │
+                                            ▼
+                                       PostgreSQL
+```
 
-### `service`
+The analysis operation and persistence are intentionally separate in v1. A report is generated first and is only persisted when the user chooses **Save analysis**.
 
-Contains the application's business logic and coordinates URL validation, analysis modules, persistence and user account operations.
+### Backend packages
 
-### `dto`
+```text
+backend/src/main/java/io/github/raulperezmoreno71/threatintel/
+├── config/       Security, CORS and OpenAPI configuration
+├── controller/   REST endpoints
+├── dto/          API request and response contracts
+├── entity/       JPA persistence model
+├── exception/    Domain exceptions and global error handling
+├── model/        Analysis result models and status types
+├── repository/   Spring Data JPA repositories
+├── security/     JWT request filter and authentication entry point
+└── service/      Use cases and analysis modules
+```
 
-Defines the request and response objects exchanged between the API and its clients, including URL analysis, persistence and user registration DTOs.
+The backend follows a conventional layered design. Controllers handle HTTP concerns, services coordinate application behaviour, repositories isolate database access, and the analysis modules each focus on one technical responsibility.
 
-### `model`
+### Frontend structure
 
-Contains internal domain models representing the results of each analysis module, including DNS, HTTP, redirect chains, SSL/TLS and security header assessments.
+```text
+frontend/src/
+├── api/          HTTP access to authentication and analysis endpoints
+├── components/   Reusable landing-page and report components
+├── pages/        Public and authenticated route-level views
+├── App.tsx       Application routes
+├── main.tsx      React entry point
+└── types.ts      Shared API response types
+```
 
-### `exception`
+The frontend is a client-rendered single-page application. React Router manages navigation and the browser sends the authentication cookie using `credentials: "include"`.
 
-Provides centralized exception handling and returns consistent error responses.
+## Technology stack
 
-The project follows a layered architecture, keeping responsibilities separated to improve readability, maintainability and scalability.
+| Area | Technology |
+|---|---|
+| Backend language | Java 21 |
+| Backend framework | Spring Boot 4 |
+| Web and security | Spring MVC, Spring Security, JWT |
+| Persistence | Spring Data JPA, Hibernate |
+| Database | PostgreSQL |
+| Networking | Java `HttpClient`, DNS APIs and JSSE |
+| API documentation | SpringDoc OpenAPI / Swagger UI |
+| Frontend | React 19, TypeScript 6, React Router 7 |
+| Build tooling | Maven Wrapper, Vite 8, npm |
+| Backend testing | JUnit 5, Mockito, MockMvc, Testcontainers |
+| Continuous integration | GitHub Actions |
 
-### `entity`
+## API
 
-Defines the JPA entities used to persist analysis results, user accounts and their relationships in PostgreSQL.
+The local API base URL is:
 
-### `repository`
+```text
+http://localhost:8080
+```
 
-Provides database access through Spring Data JPA repositories.
+### Endpoint summary
 
-## Persistence
+| Method | Endpoint | Authentication | Description |
+|---|---|:---:|---|
+| `POST` | `/api/auth/register` | No | Register a user |
+| `POST` | `/api/auth/login` | No | Authenticate and set the JWT cookie |
+| `POST` | `/api/auth/logout` | No | Expire the authentication cookie |
+| `GET` | `/api/auth/me` | Yes | Return the authenticated user |
+| `POST` | `/api/auth/change-password` | Yes | Change the current user's password |
+| `POST` | `/api/analyze` | Yes | Analyze a URL |
+| `GET` | `/api/analyses` | Yes | List the user's saved analyses |
+| `POST` | `/api/analyses` | Yes | Save a completed analysis |
+| `GET` | `/api/analyses/{id}` | Yes | Retrieve one owned analysis |
+| `DELETE` | `/api/analyses/{id}` | Yes | Delete one owned analysis |
+| `GET` | `/api/health` | Yes | Return the application health response |
 
-ThreatIntel Lite persists completed analyses in PostgreSQL using Spring Data JPA and Hibernate.
+All protected requests use the `access_token` cookie created during login. The token is not returned in the response body.
 
-The persistence model includes:
+### Authentication example
 
-- General analysis information
-- DNS analysis and resolved IP addresses
-- HTTP analysis and redirect chain
-- SSL/TLS certificate analysis
-- Security header analysis
-- Overall security assessment
+Register an account:
 
-Relationships between entities are modeled using JPA associations such as `@OneToOne`, `@OneToMany` and `@ManyToOne`.
+```http
+POST /api/auth/register
+Content-Type: application/json
 
-## API example
+{
+  "email": "user@example.com",
+  "password": "StrongPassword123!"
+}
+```
 
-### Analyze a URL
+Successful response:
 
-**Request**
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "status": "ACTIVE",
+  "createdAt": "2026-08-20T12:45:30"
+}
+```
+
+Sign in:
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "StrongPassword123!"
+}
+```
+
+The response includes the account summary and a `Set-Cookie` header containing the signed JWT:
+
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "status": "ACTIVE",
+  "message": "Login successful"
+}
+```
+
+### URL analysis example
 
 ```http
 POST /api/analyze
 Content-Type: application/json
+Cookie: access_token=<jwt>
 
 {
-    "url": "https://github.com"
+  "url": "https://example.com"
 }
 ```
 
-**Successful Response**
-
-> Each security header includes its detected value, a security assessment and an actionable recommendation when applicable. The API also calculates an overall security score and grade based on the analyzed headers.
-> 
-> The Content Security Policy value has been shortened for readability.
+The response is grouped by analysis module:
 
 ```json
 {
   "message": "URL analyzed successfully",
-  "url": "https://github.com/",
-  "domain": "github.com",
+  "url": "https://example.com",
+  "domain": "example.com",
   "dns": {
-    "ips": [
-      "140.82.121.3"
-    ]
+    "ips": ["93.184.216.34"]
   },
   "http": {
     "statusCode": 200,
-    "contentType": "text/html; charset=utf-8",
-    "server": "github.com",
+    "contentType": "text/html; charset=UTF-8",
+    "server": null,
     "contentLength": null,
-    "finalUrl": "https://github.com/",
-    "totalResponseTimeMs": 640,
+    "finalUrl": "https://example.com",
+    "totalResponseTimeMs": 180,
     "redirectChain": [
       {
-        "url": "https://github.com/",
+        "url": "https://example.com",
         "statusCode": 200,
         "location": null,
-        "responseTimeMs": 640
+        "responseTimeMs": 180
       }
     ]
   },
   "ssl": {
-    "issuer": "CN=Sectigo Public Server Authentication CA DV E36,O=Sectigo Limited,C=GB",
-    "subject": "CN=github.com",
-    "validFrom": "2026-07-03",
-    "validUntil": "2026-09-30",
-    "daysUntilExpiration": 68,
+    "issuer": "CN=Example Certificate Authority",
+    "subject": "CN=example.com",
+    "validFrom": "2026-01-01",
+    "validUntil": "2027-01-01",
+    "daysUntilExpiration": 108,
     "status": "GOOD",
     "recommendation": null
   },
   "securityHeaders": {
     "strictTransportSecurity": {
       "present": true,
-      "value": "max-age=31536000; includeSubdomains; preload",
+      "value": "max-age=31536000",
       "status": "GOOD",
       "recommendation": null
-    },
-    "contentSecurityPolicy": {
-      "present": true,
-      "value": "default-src 'none'; ... gist.github.com/assets-cdn/worker/",
-      "status": "WARNING",
-      "recommendation": "Avoid using 'unsafe-inline'. Use nonces or hashes for required inline scripts and styles."
-    },
-    "xFrameOptions": {
-      "present": true,
-      "value": "deny",
-      "status": "GOOD",
-      "recommendation": null
-    },
-    "xContentTypeOptions": {
-      "present": true,
-      "value": "nosniff",
-      "status": "GOOD",
-      "recommendation": null
-    },
-    "referrerPolicy": {
-      "present": true,
-      "value": "origin-when-cross-origin, strict-origin-when-cross-origin",
-      "status": "GOOD",
-      "recommendation": null
-    },
-    "permissionsPolicy": {
-      "present": false,
-      "value": null,
-      "status": "MISSING",
-      "recommendation": "Add a Permissions-Policy header to restrict access to unnecessary browser features."
     }
   },
   "securityAssessment": {
@@ -321,268 +318,210 @@ Content-Type: application/json
 }
 ```
 
-### Security Grade Scale
+The example is abbreviated: a real response contains the result of all six security-header checks.
 
-| Grade | Score |
-|------:|------:|
-| A | 90–100 |
-| B | 80–89 |
-| C | 70–79 |
-| D | 60–69 |
-| F | 0–59 |
+### Error contract
 
-**Validation Error**
+Errors use a consistent JSON structure:
 
 ```json
 {
-    "status": 400,
-    "error": "Bad Request",
-    "message": "URL cannot be null or blank",
-    "path": "/api/analyze"
+  "status": 400,
+  "error": "Bad Request",
+  "message": "URL cannot be null or blank",
+  "path": "/api/analyze"
 }
 ```
 
-## Analysis History API
+Common responses include `400 Bad Request`, `401 Unauthorized`, `404 Not Found`, `409 Conflict` and `500 Internal Server Error`.
 
-Retrieve all stored analyses:
+### OpenAPI documentation
 
-```http
-GET /api/analyses
-```
-
-Retrieve a stored analysis by ID:
-
-```http
-GET /api/analyses/{id}
-```
-
-Delete a stored analysis:
-
-```http
-DELETE /api/analyses/{id}
-```
-
-## Authentication API
-
-### Register
-
-Register new user:
-
-```http request
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "StrongPassword123!"
-}
-```
-
-**Successful Response**
-```json
-{
-  "id": 1,
-  "email": "user@example.com",
-  "status": "ACTIVE",
-  "createdAt": "2026-08-20T12:45:30"
-}
-```
-
-**Attempting to register an already existing email returns**
-```json
-{
-  "status": 409,
-  "error": "Conflict",
-  "message": "Email is already registered",
-  "path": "/api/auth/register"
-}
-```
-
-### Login
-
-```http request
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "StrongPassword123"
-}
-```
-
-**Successful response**
-```json
-{
-  "id": 1,
-  "email": "user@example.com",
-  "status": "ACTIVE",
-  "message": "Login successful",
-  "token": "eyJhbGciOiJIUzI1NiJ9..."
-}
-```
-
-## Getting Started
-
-### Prerequisites
-
-Before running the project, make sure you have installed:
-
- - Java 21
- - PostgreSQL
- - Git
- - Docker Desktop (required for Testcontainers integration tests)
-
-### Clone the repository
-
-```bash
-git clone https://github.com/raulperezmoreno71/threatintel-lite.git
-cd threatintel-lite/backend
-```
-
-### Database setup
-
-Create a PostgreSQL database named:
-
-```text
-threatintel
-```
-
-Configure the following environment variables:
-
-```text
-DB_URL=jdbc:postgresql://localhost:5432/threatintel
-DB_USERNAME=postgres
-DB_PASSWORD=your_postgresql_password
-```
-
-### Run the application
-
-Run these commands from the `backend` directory.
-
-Linux / macOS:
-
-```bash
-./mvnw spring-boot:run
-```
-
-Windows:
-
-```bash
-.\mvnw.cmd spring-boot:run
-```
-
-By default, the application will start on:
-
-```text
-http://localhost:8080
-```
-
-### OpenAPI Documentation
-
-Once the application is running, the interactive API documentation is available at:
+With the backend running, Swagger UI is available at:
 
 ```text
 http://localhost:8080/swagger-ui/index.html
 ```
 
-### Test the API
-
-Send a POST request to:
+The generated OpenAPI document is available at:
 
 ```text
-http://localhost:8080/api/analyze
+http://localhost:8080/v3/api-docs
 ```
 
-using the following JSON body:
+In the current v1 security configuration, these documentation routes are protected and require a valid authentication cookie.
 
-```json
-{
-    "url": "https://google.com"
-}
-```
+## Getting started
 
-## Testing
+### Prerequisites
 
-The project includes automated tests covering the analysis logic, service layer, web layer and persistence layer.
+- Git
+- Java 21
+- A current Node.js LTS release and npm
+- PostgreSQL
+- Docker Desktop or another compatible Docker environment for integration tests
 
-The test suite includes:
-
-- Unit tests for URL validation, DNS resolution, HTTP analysis, SSL/TLS analysis, security header evaluation and security score calculation.
-- Mock-based service tests using Mockito to isolate repositories and external dependencies.
-- Web layer tests using Spring MockMvc to verify analysis and history endpoints, including error responses.
-- Persistence integration tests using Testcontainers with a real PostgreSQL instance running in Docker.
-- JPA relationship and cascade tests covering DNS analysis, HTTP redirect chains, SSL/TLS data, security headers and security assessment persistence.
-- Cascade deletion tests verifying that related persisted entities are removed together with their parent analysis.
-- Unit and web layer tests for user registration, including successful registration and duplicate email handling.
-
-Run the complete test suite from the `backend` directory using the Maven Wrapper:
+### 1. Clone the repository
 
 ```bash
+git clone https://github.com/raulperezmoreno71/threatintel-lite.git
+cd threatintel-lite
+```
+
+### 2. Create the database
+
+Create a PostgreSQL database for local development:
+
+```sql
+CREATE DATABASE threatintel;
+```
+
+### 3. Configure the backend
+
+The backend reads its connection and JWT settings from environment variables:
+
+| Variable | Required | Example |
+|---|:---:|---|
+| `DB_URL` | Yes | `jdbc:postgresql://localhost:5432/threatintel` |
+| `DB_USERNAME` | No | `postgres` |
+| `DB_PASSWORD` | Yes | `local_password` |
+| `JWT_SECRET` | Yes | Base64-encoded HMAC secret |
+
+Example for Linux or macOS:
+
+```bash
+export DB_URL='jdbc:postgresql://localhost:5432/threatintel'
+export DB_USERNAME='postgres'
+export DB_PASSWORD='local_password'
+export JWT_SECRET='replace_with_a_base64_encoded_secret'
+```
+
+Example for PowerShell:
+
+```powershell
+$env:DB_URL = 'jdbc:postgresql://localhost:5432/threatintel'
+$env:DB_USERNAME = 'postgres'
+$env:DB_PASSWORD = 'local_password'
+$env:JWT_SECRET = 'replace_with_a_base64_encoded_secret'
+```
+
+Use a Base64-encoded secret with sufficient entropy for the configured HMAC algorithm. Never commit real credentials or production secrets.
+
+### 4. Run the backend
+
+Linux or macOS:
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+Windows PowerShell:
+
+```powershell
+cd backend
+.\mvnw.cmd spring-boot:run
+```
+
+The API starts at `http://localhost:8080`.
+
+### 5. Run the frontend
+
+From a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The Vite development server starts at `http://localhost:5173`. The v1 frontend expects the backend at `http://localhost:8080`, and the backend CORS configuration allows the local Vite origin.
+
+## Testing and quality checks
+
+### Backend
+
+The backend has 195 automated tests covering:
+
+- URL, DNS, HTTP, redirect, TLS and security-header analysis.
+- Weighted security-score calculation.
+- User registration, login, current-user lookup and password changes.
+- Analysis orchestration and persistence mapping.
+- Controller success and error responses with MockMvc.
+- JWT creation, expiration and authentication filtering.
+- Security configuration, CORS and the authentication entry point.
+- Global exception-to-response mapping.
+- Repository ownership, relationships, constraints and cascade behaviour.
+- Full Spring context startup.
+- PostgreSQL persistence through Testcontainers.
+
+Docker must be running because the repository and application-context tests start real PostgreSQL containers.
+
+Linux or macOS:
+
+```bash
+cd backend
 ./mvnw test
 ```
 
-On windows:
+Windows PowerShell:
 
-```bash
+```powershell
+cd backend
 .\mvnw.cmd test
 ```
 
-The complete test suite is also executed automatically by GitHub Actions on every push and pull request, including PostgreSQL integration tests powered by Testcontainers.
+### Frontend
 
-## Roadmap
+Run the static checks and production build from `frontend`:
 
-The project is being developed incrementally, with each milestone focused on learning and implementing a specific backend or networking concept.
+```bash
+npm run lint
+npm run build
+```
 
-### Completed
- - [x] URL validation
- - [x] DNS resolution
- - [x] HTTP status code analysis
- - [x] HTTP redirection detection
- - [x] HTTP response header analysis
- - [x] HTTP security header assessment
- - [x] HTTP response time measurement
- - [x] Global exception handling
- - [x] SSL/TLS certificate status evaluation
- - [x] Modular JSON response structure
- - [x] Redirect chain analysis
- - [x] Security header assessment and recommendations
- - [x] Overall security score calculation
- - [x] Overall security grade assignment
- - [x] REST API documentation (OpenAPI / Swagger)
- - [x] Unit tests for analysis components
- - [x] Service layer tests with Mockito
- - [x] Web layer tests with Spring MockMvc
- - [x] PostgreSQL integration tests with Testcontainers
- - [x] JPA relationship and cascade persistence tests
- - [x] Cascade deletion integration tests 
- - [x] Domain-specific exception handling
- - [x] PostgreSQL persistence
- - [x] JPA/Hibernate entity mapping
- - [x] Persistent storage of complete analysis results
- - [x] GitHub Actions continuous integration
- - [x] Retrieve stored analysis by ID.
- - [x] Analysis history retrieval.
- - [x] Analysis history deletion.
- - [x] User persistence and analysis ownership.
- - [x] User registration.
- - [x] Secure password hashing with Spring Security.
- - [x] Duplicate email handling.
- - [x] Automated user registration tests.
- - [x] User login and credential validation.
- - [x] JWT generation and validation.
+The current GitHub Actions workflow runs the complete backend suite on every push and pull request.
 
-### Planned
+## Current v1 boundaries
 
- - [ ] Configurable security scoring policy
- - [ ] Dockerized application deployment
- - [ ] JWT authentication filter and protected API endpoints.
- - [ ] Domain reputation analysis using external services
+Version 1 is feature-complete for its intended learning and portfolio scope, but it should be hardened before exposure as a public production service:
+
+- URL analysis does not yet block private, loopback or link-local destinations. Deployments must restrict access until SSRF protection is added.
+- HTTP connection, response-size and total-analysis limits require further hardening.
+- Analysis persistence currently accepts the completed report returned by the client.
+- Cookie security and CORS values are configured for local development.
+- Database schema changes currently rely on Hibernate rather than versioned migrations.
+- Saved-analysis listings are not paginated.
+- The frontend API origin is currently configured for the local backend.
+- Automated frontend tests and end-to-end browser tests are planned for a later iteration.
+
+These constraints are documented explicitly so that the current guarantees of the application are clear.
+
+## Roadmap beyond v1
+
+- SSRF-safe URL and redirect validation.
+- Bounded HTTP requests and configurable network policies.
+- Server-authoritative analysis persistence.
+- Environment-specific cookie, CORS and deployment configuration.
+- Bean Validation for API request contracts.
+- Versioned database migrations.
+- Paginated analysis history and lightweight list projections.
+- Shared frontend session management and protected-route layout.
+- Frontend component, integration and end-to-end tests.
+- Dockerized local and production deployment.
+- Configurable scoring policies and optional reputation providers.
+
+## Project status
+
+ThreatIntel Lite v1 is a consolidated first release: its main analysis, account, persistence and user-interface flows are implemented and backed by a comprehensive backend test suite.
+
+Development after this milestone is focused on production hardening, operational configuration, performance and frontend test automation rather than completing the initial product workflow.
 
 ## Author
 
 **Raúl Pérez Moreno**
 
-Computer Engineering student at the University of Málaga (UMA), currently developing backend projects with Java and Spring Boot, focusing on networking, REST APIs and software architecture.
+Computer Engineering student at the University of Málaga, focused on Java, Spring Boot, networking, REST APIs and software architecture.
 
- - GitHub: https://github.com/raulperezmoreno71/
- - LinkedIn: https://www.linkedin.com/in/ra%C3%BAl-p%C3%A9rez-moreno-ba0aab3a7/
+- [GitHub](https://github.com/raulperezmoreno71)
+- [LinkedIn](https://www.linkedin.com/in/ra%C3%BAl-p%C3%A9rez-moreno-ba0aab3a7/)
