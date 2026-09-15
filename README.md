@@ -524,4 +524,4 @@ Development after this milestone is focused on production hardening, operational
 Computer Engineering student at the University of Málaga, focused on Java, Spring Boot, networking, REST APIs and software architecture.
 
 - [GitHub](https://github.com/raulperezmoreno71)
-- [LinkedIn](https://www.linkedin.com/in/ra%C3%BAl-p%C3%A9rez-moreno-ba0aab3a7/)
+- [LinkedIn](https://www.linkedin.com/in/raul-perez-moreno/)
