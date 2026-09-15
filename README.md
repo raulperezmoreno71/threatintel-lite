@@ -201,7 +201,7 @@ http://localhost:8080
 | `POST` | `/api/analyses` | Yes | Save a completed analysis |
 | `GET` | `/api/analyses/{id}` | Yes | Retrieve one owned analysis |
 | `DELETE` | `/api/analyses/{id}` | Yes | Delete one owned analysis |
-| `GET` | `/api/health` | Yes | Return the application health response |
+| `GET` | `/api/health` | No | Return the application health response |
 
 All protected requests use the `access_token` cookie created during login. The token is not returned in the response body.
 

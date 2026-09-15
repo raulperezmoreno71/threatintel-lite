@@ -15,10 +15,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(HealthController.class)
@@ -33,22 +31,10 @@ class HealthControllerTest {
     private JwtService jwtService;
 
     @Test
-    void shouldReturnOkForAuthenticatedUser() throws Exception {
-        mockMvc.perform(get("/api/health").with(user("test@example.com")))
+    void shouldReturnOkForAnonymousUser() throws Exception {
+        mockMvc.perform(get("/api/health"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("ok"));
-
-        verifyNoInteractions(jwtService);
-    }
-
-    @Test
-    void shouldReturnUnauthorizedForAnonymousUser() throws Exception {
-        mockMvc.perform(get("/api/health"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.error").value("Unauthorized"))
-                .andExpect(jsonPath("$.message").value("Authentication is required"))
-                .andExpect(jsonPath("$.path").value("/api/health"));
 
         verifyNoInteractions(jwtService);
     }

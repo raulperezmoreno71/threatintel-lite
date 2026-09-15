@@ -53,9 +53,10 @@ class JwtAuthenticationFilterTest {
     @ValueSource(strings = {
             "/api/auth/login",
             "/api/auth/register",
-            "/api/auth/logout"
+            "/api/auth/logout",
+            "/api/health"
     })
-    void shouldNotFilterPublicAuthenticationEndpoints(String path) {
+    void shouldNotFilterPublicEndpoints(String path) {
         when(request.getServletPath()).thenReturn(path);
 
         assertTrue(filter.shouldNotFilter(request));
