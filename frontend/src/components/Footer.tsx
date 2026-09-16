@@ -23,7 +23,7 @@ function Footer() {
               </svg>
               Proyecto en GitHub
             </a>
-            <a href="https://www.linkedin.com/in/ra%C3%BAl-p%C3%A9rez-moreno-ba0aab3a7/">
+            <a href="https://www.linkedin.com/in/raul-perez-moreno/">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M6.4 8.2H3.3V18h3.1V8.2ZM4.9 3.3a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6ZM18.7 12.4c0-3-1.6-4.4-3.7-4.4-1.7 0-2.5 1-2.9 1.6V8.2H9V18h3.1v-4.9c0-1.3.2-2.6 1.9-2.6 1.6 0 1.7 1.5 1.7 2.7V18h3v-5.6Z" />
               </svg>
