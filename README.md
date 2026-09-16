@@ -156,6 +156,7 @@ frontend/src/
 ├── api/          HTTP access to authentication and analysis endpoints
 ├── components/   Reusable landing-page and report components
 ├── pages/        Public and authenticated route-level views
+├── test/         Shared test helpers and reusable fixtures
 ├── App.tsx       Application routes
 ├── main.tsx      React entry point
 └── types.ts      Shared API response types
@@ -177,6 +178,7 @@ The frontend is a client-rendered single-page application. React Router manages 
 | Frontend | React 19, TypeScript 6, React Router 7 |
 | Build tooling | Maven Wrapper, Vite 8, npm |
 | Backend testing | JUnit 5, Mockito, MockMvc, Testcontainers |
+| Frontend testing | Vitest, React Testing Library, jest-dom, JSDOM |
 | Continuous integration | GitHub Actions |
 
 ## API
@@ -473,14 +475,32 @@ cd backend
 
 ### Frontend
 
-Run the static checks and production build from `frontend`:
+The frontend has 64 automated tests covering:
+
+- Registration, login and password-change forms.
+- Session checks, expiration handling and logout flows.
+- URL analysis, pending requests and API error states.
+- Analysis result rendering, saving and discard confirmation.
+- Saved-analysis list, empty, loading and error states.
+- Saved-analysis detail loading and route-parameter validation.
+- Landing-page content, calls to action and navigation links.
+- Accessible names, status messages and relevant ARIA state.
+
+Run the complete test suite, static checks and production build from `frontend`:
 
 ```bash
+npm run test:run
 npm run lint
 npm run build
 ```
 
-The current GitHub Actions workflow runs the complete backend suite on every push and pull request.
+For an interactive Vitest watch session during development, run:
+
+```bash
+npm test
+```
+
+The GitHub Actions workflow runs the backend and frontend jobs independently on every push and pull request. The backend job executes the Maven test suite, while the frontend job installs locked dependencies with `npm ci` and then runs Vitest, ESLint and the production build.
 
 ## Current v1 boundaries
 
@@ -493,7 +513,7 @@ Version 1 is feature-complete for its intended learning and portfolio scope, but
 - Database schema changes currently rely on Hibernate rather than versioned migrations.
 - Saved-analysis listings are not paginated.
 - The frontend API origin is currently configured for the local backend.
-- Automated frontend tests and end-to-end browser tests are planned for a later iteration.
+- End-to-end browser tests are planned for a later iteration.
 
 These constraints are documented explicitly so that the current guarantees of the application are clear.
 
@@ -507,15 +527,15 @@ These constraints are documented explicitly so that the current guarantees of th
 - Versioned database migrations.
 - Paginated analysis history and lightweight list projections.
 - Shared frontend session management and protected-route layout.
-- Frontend component, integration and end-to-end tests.
+- End-to-end browser tests for the main user journeys.
 - Dockerized local and production deployment.
 - Configurable scoring policies and optional reputation providers.
 
 ## Project status
 
-ThreatIntel Lite v1 is a consolidated first release: its main analysis, account, persistence and user-interface flows are implemented and backed by a comprehensive backend test suite.
+ThreatIntel Lite v1 is a consolidated first release: its main analysis, account, persistence and user-interface flows are implemented and backed by comprehensive backend and frontend test suites.
 
-Development after this milestone is focused on production hardening, operational configuration, performance and frontend test automation rather than completing the initial product workflow.
+Development after this milestone is focused on production hardening, operational configuration, performance and end-to-end browser coverage rather than completing the initial product workflow.
 
 ## Author
 
