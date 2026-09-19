@@ -2,7 +2,7 @@ import { apiFetch } from './ApiClient'
 import type { AnalyzeResponse, AnalysisHistoryResponse, ApiErrorResponse } from '../types'
 
 export async function getSavedAnalyses(): Promise<AnalysisHistoryResponse[]> {
-  const response = await apiFetch('http://localhost:8080/api/analyses', {
+  const response = await apiFetch('/api/analyses', {
     method: 'GET',
   })
 
@@ -17,7 +17,7 @@ export async function getSavedAnalyses(): Promise<AnalysisHistoryResponse[]> {
 }
 
 export async function getSavedAnalysis(id: number): Promise<AnalysisHistoryResponse> {
-  const response = await apiFetch(`http://localhost:8080/api/analyses/${id}`, {
+  const response = await apiFetch(`/api/analyses/${id}`, {
     method: 'GET',
   })
 
@@ -32,7 +32,7 @@ export async function getSavedAnalysis(id: number): Promise<AnalysisHistoryRespo
 }
 
 export async function saveAnalysis(analysis: AnalyzeResponse): Promise<void> {
-  const response = await apiFetch('http://localhost:8080/api/analyses', {
+  const response = await apiFetch('/api/analyses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

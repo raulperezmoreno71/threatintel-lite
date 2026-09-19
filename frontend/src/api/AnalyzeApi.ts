@@ -5,7 +5,7 @@ export async function analyzeUrl(
     url: string
 ): Promise<AnalyzeResponse> {
     
-    const response = await apiFetch('http://localhost:8080/api/analyze', {
+    const response = await apiFetch('/api/analyze', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

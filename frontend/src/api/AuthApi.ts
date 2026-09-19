@@ -5,7 +5,7 @@ export async function login(
     email: string,
     password: string,
 ): Promise<LoginResponse> {
-    const response = await apiFetch('http://localhost:8080/api/auth/login', {
+    const response = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -30,7 +30,7 @@ export async function register(
     email: string,
     password: string,
 ): Promise<RegisterResponse> {
-    const response = await apiFetch('http://localhost:8080/api/auth/register', {
+    const response = await apiFetch('/api/auth/register', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ export async function register(
 
 export async function getCurrentUser(): Promise<UserResponse> {
     const response = await apiFetch(
-        'http://localhost:8080/api/auth/me',
+        '/api/auth/me',
         {
             method: 'GET'
         }
@@ -70,7 +70,7 @@ export async function getCurrentUser(): Promise<UserResponse> {
 }
 
 export async function logout(): Promise<void> {
-    const response = await apiFetch('http://localhost:8080/api/auth/logout', {
+    const response = await apiFetch('/api/auth/logout', {
         method: 'POST',
     })
 
@@ -83,12 +83,11 @@ export async function changePassword(
     currentPassword: string,
     newPassword: string
 ): Promise<void> {
-    const response = await fetch('http://localhost:8080/api/auth/change-password', {
+    const response = await apiFetch('/api/auth/change-password', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify({
             currentPassword,
             newPassword
