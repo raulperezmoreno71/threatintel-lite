@@ -31,6 +31,7 @@ import tools.jackson.databind.ObjectMapper;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static io.github.raulperezmoreno71.threatintel.support.CsrfRequestPostProcessors.csrfCookieAndHeader;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -64,6 +65,7 @@ class UserControllerTest {
 
         mockMvc.perform(
                 post("/api/auth/register")
+                        .with(csrfCookieAndHeader())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                 )
@@ -80,6 +82,7 @@ class UserControllerTest {
 
         mockMvc.perform(
                 post("/api/auth/register")
+                        .with(csrfCookieAndHeader())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsBytes(request))
                 )
@@ -100,6 +103,7 @@ class UserControllerTest {
 
         mockMvc.perform(
                 post("/api/auth/login")
+                        .with(csrfCookieAndHeader())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                 )
@@ -125,6 +129,7 @@ class UserControllerTest {
 
         mockMvc.perform(
                 post("/api/auth/login")
+                        .with(csrfCookieAndHeader())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
                 )
@@ -218,7 +223,7 @@ class UserControllerTest {
 
     @Test
     void shouldLogoutSuccessfully() throws Exception {
-        mockMvc.perform(post("/api/auth/logout"))
+        mockMvc.perform(post("/api/auth/logout").with(csrfCookieAndHeader()))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""))
                 .andExpect(cookie().value("access_token", ""))
@@ -238,6 +243,7 @@ class UserControllerTest {
 
         mockMvc.perform(
                         post("/api/auth/change-password")
+                                .with(csrfCookieAndHeader())
                                 .with(user("user@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
@@ -263,6 +269,7 @@ class UserControllerTest {
 
         mockMvc.perform(
                         post("/api/auth/change-password")
+                                .with(csrfCookieAndHeader())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
                 )
@@ -288,6 +295,7 @@ class UserControllerTest {
 
         mockMvc.perform(
                         post("/api/auth/change-password")
+                                .with(csrfCookieAndHeader())
                                 .with(user("user@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
@@ -317,6 +325,7 @@ class UserControllerTest {
 
         mockMvc.perform(
                         post("/api/auth/change-password")
+                                .with(csrfCookieAndHeader())
                                 .with(user("user@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
@@ -346,6 +355,7 @@ class UserControllerTest {
 
         mockMvc.perform(
                         post("/api/auth/change-password")
+                                .with(csrfCookieAndHeader())
                                 .with(user("missing@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
@@ -366,6 +376,7 @@ class UserControllerTest {
     void shouldReturnBadRequestWhenChangePasswordJsonIsMalformed() throws Exception {
         mockMvc.perform(
                         post("/api/auth/change-password")
+                                .with(csrfCookieAndHeader())
                                 .with(user("user@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{")
@@ -383,6 +394,7 @@ class UserControllerTest {
     void shouldReturnBadRequestWhenChangePasswordBodyIsMissing() throws Exception {
         mockMvc.perform(
                         post("/api/auth/change-password")
+                                .with(csrfCookieAndHeader())
                                 .with(user("user@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                 )

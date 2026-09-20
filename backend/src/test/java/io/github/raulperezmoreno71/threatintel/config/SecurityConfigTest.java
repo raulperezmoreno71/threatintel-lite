@@ -29,6 +29,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static io.github.raulperezmoreno71.threatintel.support.CsrfRequestPostProcessors.csrfCookieAndHeader;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -64,9 +66,18 @@ class SecurityConfigTest {
             "/api/auth/logout"
     })
     void shouldAllowAuthenticationEndpointsWithoutAuthentication(String path) throws Exception {
-        mockMvc.perform(post(path))
+        mockMvc.perform(post(path).with(csrfCookieAndHeader()))
                 .andExpect(status().isOk())
                 .andExpect(content().string("ok"));
+
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void shouldRejectUnsafeRequestWithoutCsrfToken() throws Exception {
+        mockMvc.perform(post("/api/auth/login"))
+                .andExpect(status().isForbidden())
+                .andExpect(cookie().exists("XSRF-TOKEN"));
 
         verifyNoInteractions(jwtService);
     }
@@ -113,7 +124,7 @@ class SecurityConfigTest {
         assertNotNull(configuration);
         assertEquals(List.of("http://localhost:5173"), configuration.getAllowedOrigins());
         assertEquals(List.of("GET", "POST", "DELETE", "OPTIONS"), configuration.getAllowedMethods());
-        assertEquals(List.of("Authorization", "Content-Type"), configuration.getAllowedHeaders());
+        assertEquals(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN"), configuration.getAllowedHeaders());
         assertEquals(Boolean.TRUE, configuration.getAllowCredentials());
         assertEquals("http://localhost:5173", configuration.checkOrigin("http://localhost:5173"));
         assertNull(configuration.checkOrigin("https://unknown.example"));

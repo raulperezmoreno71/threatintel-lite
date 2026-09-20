@@ -30,10 +30,11 @@ import tools.jackson.databind.ObjectMapper;
 import java.util.List;
 
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static io.github.raulperezmoreno71.threatintel.support.CsrfRequestPostProcessors.csrfCookieAndHeader;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -142,6 +143,7 @@ class AnalysisHistoryControllerTest {
     void shouldDeleteAnalysisById() throws Exception {
         mockMvc.perform(
                         delete("/api/analyses/1")
+                                .with(csrfCookieAndHeader())
                                 .with(user("test@example.com"))
                 )
                 .andExpect(status().isNoContent());
@@ -155,6 +157,7 @@ class AnalysisHistoryControllerTest {
 
         mockMvc.perform(
                         delete("/api/analyses/99")
+                                .with(csrfCookieAndHeader())
                                 .with(user("test@example.com"))
                 )
                 .andExpect(status().isNotFound())
@@ -172,6 +175,7 @@ class AnalysisHistoryControllerTest {
 
         mockMvc.perform(
                         post("/api/analyses")
+                                .with(csrfCookieAndHeader())
                                 .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
@@ -196,6 +200,7 @@ class AnalysisHistoryControllerTest {
     void shouldReturnBadRequestWhenSaveAnalysisJsonIsMalformed() throws Exception {
         mockMvc.perform(
                         post("/api/analyses")
+                                .with(csrfCookieAndHeader())
                                 .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{")
@@ -213,6 +218,7 @@ class AnalysisHistoryControllerTest {
     void shouldReturnBadRequestWhenSaveAnalysisBodyIsMissing() throws Exception {
         mockMvc.perform(
                         post("/api/analyses")
+                                .with(csrfCookieAndHeader())
                                 .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                 )
@@ -231,6 +237,7 @@ class AnalysisHistoryControllerTest {
 
         mockMvc.perform(
                         post("/api/analyses")
+                                .with(csrfCookieAndHeader())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
                 )

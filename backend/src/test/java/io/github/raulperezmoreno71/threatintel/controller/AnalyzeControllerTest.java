@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static io.github.raulperezmoreno71.threatintel.support.CsrfRequestPostProcessors.csrfCookieAndHeader;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -67,6 +68,7 @@ class AnalyzeControllerTest {
 
         mockMvc.perform(
                         post("/api/analyze")
+                                .with(csrfCookieAndHeader())
                                 .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
@@ -103,6 +105,7 @@ class AnalyzeControllerTest {
 
         mockMvc.perform(
                         post("/api/analyze")
+                                .with(csrfCookieAndHeader())
                                 .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
@@ -141,6 +144,7 @@ class AnalyzeControllerTest {
 
         mockMvc.perform(
                         post("/api/analyze")
+                                .with(csrfCookieAndHeader())
                                 .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
@@ -174,6 +178,7 @@ class AnalyzeControllerTest {
 
         mockMvc.perform(
                         post("/api/analyze")
+                                .with(csrfCookieAndHeader())
                                 .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(invalidJason)
@@ -199,6 +204,7 @@ class AnalyzeControllerTest {
     void shouldReturnBadRequestWhenRequestBodyIsMissing() throws Exception {
         mockMvc.perform(
                         post("/api/analyze")
+                                .with(csrfCookieAndHeader())
                                 .with(user("test@example.com"))
                                 .contentType(MediaType.APPLICATION_JSON)
                 )
@@ -213,6 +219,7 @@ class AnalyzeControllerTest {
 
         mockMvc.perform(
                         post("/api/analyze")
+                                .with(csrfCookieAndHeader())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request))
                 )
@@ -231,7 +238,7 @@ class AnalyzeControllerTest {
                         options("/api/analyze")
                                 .header(HttpHeaders.ORIGIN, "http://localhost:5173")
                                 .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
-                                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Content-Type")
+                                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Content-Type, X-XSRF-TOKEN")
                 )
                 .andExpect(status().isOk())
                 .andExpect(header().string(
@@ -245,6 +252,10 @@ class AnalyzeControllerTest {
                 .andExpect(header().string(
                         HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS,
                         "true"
+                ))
+                .andExpect(header().string(
+                        HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS,
+                        "Content-Type, X-XSRF-TOKEN"
                 ));
 
         verifyNoInteractions(analyzeService);

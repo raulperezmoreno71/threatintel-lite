@@ -443,7 +443,7 @@ The Vite development server starts at `http://localhost:5173`. The v1 frontend e
 
 ### Backend
 
-The backend has 195 automated tests covering:
+The backend has 196 automated tests covering:
 
 - URL, DNS, HTTP, redirect, TLS and security-header analysis.
 - Weighted security-score calculation.
