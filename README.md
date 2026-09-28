@@ -158,11 +158,14 @@ frontend/src/
 ├── pages/        Public and authenticated route-level views
 ├── test/         Shared test helpers and reusable fixtures
 ├── App.tsx       Application routes
+├── entry-server.tsx  Static rendering entry for the public landing page
 ├── main.tsx      React entry point
 └── types.ts      Shared API response types
 ```
 
-The frontend is a client-rendered single-page application. React Router manages navigation and the browser sends the authentication cookie using `credentials: "include"`.
+The public landing page is pre-rendered into `dist/index.html` during the production build, so its content and links are present in the initial HTML response. React hydrates that page for navigation and interaction. Authentication and private routes use the client-rendered `dist/app.html` shell with `noindex`. React Router manages navigation and the browser sends the authentication cookie using `credentials: "include"`.
+
+The production web server must serve `index.html` only for `/`, serve `app.html` for the known application routes, and return HTTP 404 for unknown routes. A full Nginx configuration based on the VPS setup is provided in `deploy/nginx-frontend-seo.conf.example`; review it against the active configuration, validate it with `nginx -t`, and reload Nginx before relying on the new routing. The deployment script copies the complete frontend artifact. The build also copies `robots.txt`, `sitemap.xml`, the social preview image and `404.html` from `frontend/public`.
 
 ## Technology stack
 

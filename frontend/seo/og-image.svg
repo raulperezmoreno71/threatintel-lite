@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#5eead4" />
+      <stop offset="1" stop-color="#14b8a6" />
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop stop-color="#14b8a6" stop-opacity=".20" />
+      <stop offset="1" stop-color="#14b8a6" stop-opacity="0" />
+    </radialGradient>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M44 0H0V44" fill="none" stroke="#94a3b8" stroke-opacity=".09" />
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" fill="#0b1220" />
+  <rect width="1200" height="630" fill="url(#grid)" />
+  <circle cx="985" cy="170" r="430" fill="url(#glow)" />
+
+  <rect x="72" y="65" width="62" height="62" rx="14" fill="url(#accent)" />
+  <path d="M103 75 123 83V99c0 14-8 24-20 29-12-5-20-15-20-29V83l20-8Z" fill="#0b1220" />
+  <path d="M91 88h24v7h-8v22h-8V95h-8v-7Z" fill="#5eead4" />
+  <text x="154" y="108" fill="#f8fafc" font-family="Arial, sans-serif" font-size="30" font-weight="700">ThreatIntel <tspan fill="#5eead4">Lite</tspan></text>
+
+  <text x="72" y="236" fill="#5eead4" font-family="Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="3">ANÁLISIS WEB CENTRALIZADO</text>
+  <text x="72" y="316" fill="#f8fafc" font-family="Arial, sans-serif" font-size="62" font-weight="700">Analiza la seguridad</text>
+  <text x="72" y="390" fill="#f8fafc" font-family="Arial, sans-serif" font-size="62" font-weight="700">de una URL</text>
+  <text x="72" y="460" fill="#a9b7ca" font-family="Arial, sans-serif" font-size="27">DNS · HTTP · Redirecciones · SSL/TLS · Cabeceras</text>
+
+  <rect x="72" y="524" width="190" height="4" rx="2" fill="url(#accent)" />
+  <text x="72" y="575" fill="#a9b7ca" font-family="Arial, sans-serif" font-size="22">Un informe técnico, claro y accionable.</text>
+</svg>

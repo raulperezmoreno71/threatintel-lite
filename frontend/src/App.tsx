@@ -6,18 +6,24 @@ import DashboardPage from './pages/DashboardPage'
 import SavedAnalysesPage from './pages/SavedAnalysesPage'
 import AnalysisDetailPage from './pages/AnalysisDetailPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
+import NotFoundPage from './pages/NotFoundPage'
+import RouteMetadata from './components/RouteMetadata'
 
 function App() {
   return (
-    <Routes>
-      <Route path='/' element={<LandingPage />} />
-      <Route path='/login' element={<LoginPage />} />
-      <Route path='/register' element={<RegisterPage />} />
-      <Route path='/dashboard' element={<DashboardPage />} />
-      <Route path='/analyses' element={<SavedAnalysesPage />} />
-      <Route path='/analyses/:analysisId' element={<AnalysisDetailPage />} />
-      <Route path='/change-password' element={<ChangePasswordPage />} />
-    </Routes>
+    <>
+      <RouteMetadata />
+      <Routes>
+        <Route path='/' element={<LandingPage />} />
+        <Route path='/login' element={<LoginPage />} />
+        <Route path='/register' element={<RegisterPage />} />
+        <Route path='/dashboard' element={<DashboardPage />} />
+        <Route path='/analyses' element={<SavedAnalysesPage />} />
+        <Route path='/analyses/:analysisId' element={<AnalysisDetailPage />} />
+        <Route path='/change-password' element={<ChangePasswordPage />} />
+        <Route path='*' element={<NotFoundPage />} />
+      </Routes>
+    </>
   )
 }
 

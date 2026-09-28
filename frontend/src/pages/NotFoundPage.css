@@ -1,0 +1,43 @@
+.not-found-page {
+  box-sizing: border-box;
+  min-height: 100svh;
+  padding: 2rem;
+  display: grid;
+  place-items: center;
+  color: #f8fafc;
+  background: #0b1220;
+  text-align: center;
+}
+
+.not-found-page__code {
+  margin: 0;
+  color: #5eead4;
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: 0.15em;
+}
+
+.not-found-page h1 {
+  margin: 0.75rem 0;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+}
+
+.not-found-page p:not(.not-found-page__code) {
+  margin: 0 0 2rem;
+  color: #a9b7ca;
+}
+
+.not-found-page a {
+  padding: 0.85rem 1.25rem;
+  display: inline-block;
+  border-radius: 0.75rem;
+  color: #042f2e;
+  background: #5eead4;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.not-found-page a:focus-visible {
+  outline: 3px solid #f8fafc;
+  outline-offset: 3px;
+}

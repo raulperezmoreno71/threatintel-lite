@@ -29,6 +29,8 @@ describe('LandingPage', () => {
     expect(screen.getByRole('heading', {
       name: 'Cómo funciona el análisis de seguridad',
     })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Qué significan los resultados' })).toBeVisible()
+    expect(screen.getByText(/no sustituye una auditoría de seguridad completa/i)).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Comprueba la seguridad de una URL' }))
       .toBeVisible()
     expect(screen.getByText('© 2026 ThreatIntel Lite')).toBeVisible()
