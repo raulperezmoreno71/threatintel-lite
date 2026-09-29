@@ -6,6 +6,10 @@ ThreatIntel Lite is a full-stack web application that analyzes the technical sec
 
 The application combines a Java 21 and Spring Boot REST API with a React and TypeScript client. Authenticated users can run URL analyses, inspect DNS, HTTP, redirect, TLS and security-header information, calculate an overall score, and save selected reports to a private history backed by PostgreSQL.
 
+## Live demo
+
+[Open ThreatIntel Lite](https://threatintel.raulperezmoreno.dev/)
+
 > [!IMPORTANT]
 > ThreatIntel Lite provides a lightweight technical assessment based on publicly observable URL, certificate and HTTP-header information. It is not a vulnerability scanner, penetration-testing tool or substitute for a professional security audit.
 
