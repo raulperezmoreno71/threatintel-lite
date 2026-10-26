@@ -42,6 +42,7 @@ Authentication is handled with a signed JWT stored in an HttpOnly cookie. Protec
 - Response time for each request and for the complete redirect chain.
 - Response-header inspection without downloading the response body.
 - A configurable time budget shared by the complete analysis pipeline.
+- Per-user analysis rate limiting: 5 admitted requests per rolling 60-second window by default.
 
 ### TLS certificate analysis
 
@@ -75,6 +76,16 @@ The transport collects status and headers, then closes the connection without co
 
 The DNS deadline bounds how long the analysis waits. A native DNS lookup may ignore thread interruption and continue in a worker; the bounded worker pool and queue prevent unlimited resolver task accumulation.
 
+### Per-user analysis rate limiting
+
+`POST /api/analyze` is limited by the authenticated user's database ID. By default, each user can start up to **5 analysis requests in any rolling 60-second window**. The next request returns `429 Too Many Requests` before the analysis pipeline runs. Each user has an independent allowance; this does not limit the number of registered accounts.
+
+Admission is checked before URL validation and outbound network work. An admitted request consumes a slot even if the analysis later fails or the URL is rejected. Rate-limited requests do not consume additional slots or extend the window. Slots become available individually as earlier attempts reach the configured age, rather than resetting at fixed clock-minute boundaries.
+
+`AnalysisRateLimitService` synchronizes admission checks to enforce the limit for concurrent requests within one backend instance. It removes inactive user entries with a scheduled cleanup every 60 seconds; expired attempts are also discarded during admission, so recovery does not depend on waiting for cleanup.
+
+Counters are stored in memory. Restarting the backend resets them, and multiple backend instances do not share the same counters. The policy applies only to URL analysis, not registration, login or other API endpoints.
+
 ### HTTP security assessment
 
 ThreatIntel Lite evaluates six response headers:
@@ -87,6 +98,19 @@ ThreatIntel Lite evaluates six response headers:
 - `Permissions-Policy`
 
 Every header receives a status, its detected value and an actionable recommendation when improvement is needed. The results are combined into a weighted score and an overall grade.
+
+The score is based only on these six headers; DNS results, HTTP response codes and TLS certificate status are reported separately and do not add or subtract points.
+
+| Header | Maximum points |
+|---|---:|
+| `Content-Security-Policy` | 30 |
+| `Strict-Transport-Security` | 20 |
+| `X-Content-Type-Options` | 15 |
+| `X-Frame-Options` | 15 |
+| `Referrer-Policy` | 10 |
+| `Permissions-Policy` | 10 |
+
+`GOOD` earns the full weight, `WARNING` earns half rounded to the nearest integer, and `MISSING` earns zero points.
 
 | Grade | Score |
 |:-----:|------:|
@@ -385,14 +409,28 @@ Errors use a consistent JSON structure:
 
 Common responses include `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict` and `500 Internal Server Error`. The JSON contract above describes controller/advice and authentication-entry-point errors; security-filter errors such as CSRF rejection may use a different response representation.
 
-The analysis pipeline also exposes two explicit resource-limit responses:
+The analysis endpoint also exposes these explicit resource-limit responses:
 
 | Status | Message | Meaning |
 |---|---|---|
+| `429 Too Many Requests` | `Too many analysis request. Please try again later.` | The user's rolling analysis allowance has been exhausted |
 | `503 Service Unavailable` | `DNS resolver is busy; try again later` | All resolver workers and queue slots are occupied |
 | `504 Gateway Timeout` | `Analysis time limit exceeded` | The shared analysis budget has expired |
 
 Rejected URL schemes, ports or destination IP addresses return `400 Bad Request`. An individual network or TLS failure can occur before the overall deadline and is handled separately; not every network timeout produces `504`.
+
+A rate-limit rejection uses the standard error contract:
+
+```json
+{
+  "status": 429,
+  "error": "Too Many Requests",
+  "message": "Too many analysis request. Please try again later.",
+  "path": "/api/analyze"
+}
+```
+
+The current response does not include a `Retry-After` header. A new request can be admitted once an earlier attempt leaves the rolling window.
 
 ### OpenAPI documentation
 
@@ -416,7 +454,7 @@ In the current v1 security configuration, these documentation routes are protect
 
 - Git
 - Java 21
-- A current Node.js LTS release and npm
+- Node.js `22.22.2` or later in the 22.x line, or `24.15.0` or later in the 24.x line, and npm (required by the installed JSDOM test dependency)
 - PostgreSQL
 - Docker Desktop or another compatible Docker environment for integration tests
 
@@ -475,9 +513,24 @@ The default profile is configured for local development. Activate the production
 | `app.cookie.secure` | `false` | `true` |
 | `app.cors.allowed-origin` | `http://localhost:5173` | `https://threatintel.raulperezmoreno.dev` |
 | `app.analysis.timeout-ms` | `15000` | Inherits the default unless overridden |
+| `app.analysis.rate-limit.max-requests` | `5` | Inherits the default unless overridden |
+| `app.analysis.rate-limit.window-seconds` | `60` | Inherits the default unless overridden |
 | `spring.jpa.hibernate.ddl-auto` | `update` | `update` |
 
-The analysis timeout must be positive. It can be overridden through Spring Boot configuration, for example with the environment variable `APP_ANALYSIS_TIMEOUT_MS=20000` for a 20-second budget. CORS and authentication-cookie security can likewise be configured with `APP_CORS_ALLOWED_ORIGIN` and `APP_COOKIE_SECURE`.
+The analysis timeout must be positive. For a 20-second budget, set the following property in the active Spring Boot configuration:
+
+```properties
+app.analysis.timeout-ms=20000
+```
+
+The same setting can be supplied as the application argument `--app.analysis.timeout-ms=20000` when running the packaged JAR. CORS and authentication-cookie security can be overridden with `APP_CORS_ALLOWED_ORIGIN` and `APP_COOKIE_SECURE`.
+
+Both rate-limit settings must be positive. Configure the number of admitted requests and the rolling-window duration independently, for example:
+
+```properties
+app.analysis.rate-limit.max-requests=5
+app.analysis.rate-limit.window-seconds=60
+```
 
 ### 4. Run the backend
 
@@ -521,6 +574,8 @@ The backend automated test suite covers:
 - Real local TLS handshakes, SNI, hostname verification and certificate trust failures.
 - Header-only HTTP handling without waiting for response bodies.
 - Shared deadlines, slow headers, cancelled TLS operations and DNS queue saturation.
+- Per-user rate limits, rolling-window expiry, rejected attempts, concurrent admission and scheduled cleanup.
+- Controller/rate-limiter integration, including `429` responses, independent user allowances and counting failed analyses.
 - Weighted security-score calculation.
 - User registration, login, current-user lookup and password changes.
 - Analysis orchestration and persistence mapping.
@@ -583,11 +638,11 @@ On a push to `main`, deployment runs only after both jobs pass. It packages the 
 
 ## Current v1 boundaries
 
-Version 1 includes public-destination validation, pinned outbound connections, shared analysis deadlines, CSRF protection and a production configuration profile. The following boundaries remain:
+Version 1 includes public-destination validation, pinned outbound connections, shared analysis deadlines, per-user analysis rate limiting, CSRF protection and a production configuration profile. The following boundaries remain:
 
 - Analysis persistence currently accepts the completed report returned by the client.
 - Request DTOs do not yet have comprehensive Bean Validation constraints.
-- Application-wide rate limiting and per-user analysis quotas are not implemented.
+- Analysis rate-limit counters are local to each backend instance and reset on restart. Shared counters and application-wide throttling for other endpoints are not implemented.
 - A native DNS lookup can outlive the caller's deadline; resolver capacity is bounded and overload is reported explicitly.
 - Invalid or untrusted HTTPS certificates can stop the analysis during the HTTP handshake before a certificate report is produced.
 - Database schema changes currently rely on Hibernate rather than versioned migrations.
@@ -598,7 +653,7 @@ These constraints are documented explicitly so that the current guarantees of th
 
 ## Roadmap beyond v1
 
-- Application-wide rate limiting and per-user analysis quotas.
+- Shared rate-limit counters for multi-instance deployments and throttling for other endpoints.
 - Further operational tuning of network limits and resolver capacity.
 - Server-authoritative analysis persistence.
 - Bean Validation for API request contracts.

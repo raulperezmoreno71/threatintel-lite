@@ -3,7 +3,11 @@ package io.github.raulperezmoreno71.threatintel.controller;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeRequest;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeResponse;
 import io.github.raulperezmoreno71.threatintel.dto.ErrorResponse;
+import io.github.raulperezmoreno71.threatintel.entity.User;
+import io.github.raulperezmoreno71.threatintel.exception.AnalysisRateLimitExceededException;
+import io.github.raulperezmoreno71.threatintel.service.AnalysisRateLimitService;
 import io.github.raulperezmoreno71.threatintel.service.AnalyzeService;
+import io.github.raulperezmoreno71.threatintel.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -16,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.security.Principal;
+
 @RestController
 @RequestMapping("/api")
 @Tag(
@@ -24,9 +30,17 @@ import org.springframework.web.bind.annotation.RestController;
 )
 public class AnalyzeController {
     private final AnalyzeService analyzeService;
+    private final AnalysisRateLimitService analysisRateLimitService;
+    private final UserService userService;
 
-    public AnalyzeController (AnalyzeService analyzeService) {
+    public AnalyzeController (
+            AnalyzeService analyzeService,
+            AnalysisRateLimitService analysisRateLimitService,
+            UserService userService
+    ) {
         this.analyzeService = analyzeService;
+        this.analysisRateLimitService = analysisRateLimitService;
+        this.userService = userService;
     }
 
     @Operation(
@@ -88,7 +102,13 @@ public class AnalyzeController {
             )
     })
     @PostMapping("/analyze")
-    public AnalyzeResponse analyze (@RequestBody AnalyzeRequest request) {
+    public AnalyzeResponse analyze (@RequestBody AnalyzeRequest request, Principal principal) {
+        User user = userService.getByEmail(principal.getName());
+
+        if (!analysisRateLimitService.tryAcquire(user.getId())) {
+            throw new AnalysisRateLimitExceededException();
+        }
+
         return analyzeService.analyze(request);
     }
 }

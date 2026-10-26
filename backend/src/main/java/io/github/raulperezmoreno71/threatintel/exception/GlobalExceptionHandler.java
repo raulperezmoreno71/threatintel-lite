@@ -84,6 +84,15 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(AnalysisRateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleAnalysisRateLimitExceededException(AnalysisRateLimitExceededException exception, HttpServletRequest request) {
+        return buildErrorResponse(
+                HttpStatus.TOO_MANY_REQUESTS,
+                exception.getMessage(),
+                request
+        );
+    }
+
     private ResponseEntity<ErrorResponse> buildErrorResponse (HttpStatus status, String message, HttpServletRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(
                 status.value(),

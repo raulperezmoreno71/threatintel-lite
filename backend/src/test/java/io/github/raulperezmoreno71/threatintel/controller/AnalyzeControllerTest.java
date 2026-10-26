@@ -3,10 +3,14 @@ package io.github.raulperezmoreno71.threatintel.controller;
 import io.github.raulperezmoreno71.threatintel.config.SecurityConfig;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeRequest;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeResponse;
+import io.github.raulperezmoreno71.threatintel.entity.User;
 import io.github.raulperezmoreno71.threatintel.security.CustomAuthenticationEntryPoint;
 import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
 import io.github.raulperezmoreno71.threatintel.service.AnalyzeService;
+import io.github.raulperezmoreno71.threatintel.service.AnalysisRateLimitService;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
+import io.github.raulperezmoreno71.threatintel.service.UserService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -48,6 +52,40 @@ class AnalyzeControllerTest {
     @MockitoBean
     private JwtService jwtService;
 
+    @MockitoBean
+    private AnalysisRateLimitService analysisRateLimitService;
+
+    @MockitoBean
+    private UserService userService;
+
+    @BeforeEach
+    void setUpAuthenticatedUser() {
+        User authenticatedUser = mock(User.class);
+        when(authenticatedUser.getId()).thenReturn(42L);
+        when(userService.getByEmail("test@example.com")).thenReturn(authenticatedUser);
+        when(analysisRateLimitService.tryAcquire(42L)).thenReturn(true);
+    }
+
+    @Test
+    void shouldRejectAnalysisWhenAuthenticatedUserExceedsLimit() throws Exception {
+        when(analysisRateLimitService.tryAcquire(42L)).thenReturn(false);
+
+        mockMvc.perform(post("/api/analyze")
+                        .with(csrfCookieAndHeader())
+                        .with(user("test@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"url\":\"https://example.com\"}"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.error").value("Too Many Requests"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.path").value("/api/analyze"));
+
+        verify(userService).getByEmail("test@example.com");
+        verify(analysisRateLimitService).tryAcquire(42L);
+        verifyNoInteractions(analyzeService);
+    }
+
     @Test
     void shouldReturnOkWhenUrlIsAnalyzedSuccessfully() throws Exception {
         AnalyzeRequest request = new AnalyzeRequest("https://example.com");
@@ -84,7 +122,10 @@ class AnalyzeControllerTest {
                         jsonPath("$.domain").value("example.com")
                 );
 
-        verify(analyzeService).analyze(
+        var order = inOrder(userService, analysisRateLimitService, analyzeService);
+        order.verify(userService).getByEmail("test@example.com");
+        order.verify(analysisRateLimitService).tryAcquire(42L);
+        order.verify(analyzeService).analyze(
                 argThat(
                         analyzeRequest ->
                                 "https://example.com".equals(analyzeRequest.getUrl())
@@ -197,7 +238,7 @@ class AnalyzeControllerTest {
                         jsonPath("$.path").value("/api/analyze")
                 );
 
-        verifyNoInteractions(analyzeService);
+        verifyNoInteractions(analyzeService, userService, analysisRateLimitService);
     }
 
     @Test
@@ -210,7 +251,7 @@ class AnalyzeControllerTest {
                 )
                 .andExpect(status().isBadRequest());
 
-        verifyNoInteractions(analyzeService);
+        verifyNoInteractions(analyzeService, userService, analysisRateLimitService);
     }
 
     @Test
@@ -229,7 +270,18 @@ class AnalyzeControllerTest {
                 .andExpect(jsonPath("$.message").value("Authentication is required"))
                 .andExpect(jsonPath("$.path").value("/api/analyze"));
 
-        verifyNoInteractions(analyzeService);
+        verifyNoInteractions(analyzeService, userService, analysisRateLimitService);
+    }
+
+    @Test
+    void shouldRejectMissingCsrfTokenWithoutConsumingAnalysisLimit() throws Exception {
+        mockMvc.perform(post("/api/analyze")
+                        .with(user("test@example.com"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"url\":\"https://example.com\"}"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(analyzeService, userService, analysisRateLimitService);
     }
 
     @Test
@@ -258,7 +310,7 @@ class AnalyzeControllerTest {
                         "Content-Type, X-XSRF-TOKEN"
                 ));
 
-        verifyNoInteractions(analyzeService);
+        verifyNoInteractions(analyzeService, userService, analysisRateLimitService);
     }
 
     @Test
@@ -271,6 +323,6 @@ class AnalyzeControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
 
-        verifyNoInteractions(analyzeService);
+        verifyNoInteractions(analyzeService, userService, analysisRateLimitService);
     }
 }
