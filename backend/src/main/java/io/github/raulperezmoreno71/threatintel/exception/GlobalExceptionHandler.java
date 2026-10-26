@@ -11,6 +11,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(AnalysisTimeoutException.class)
+    public ResponseEntity<ErrorResponse> handleAnalysisTimeout(AnalysisTimeoutException exception, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.GATEWAY_TIMEOUT, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(DnsResolverBusyException.class)
+    public ResponseEntity<ErrorResponse> handleDnsResolverBusy(DnsResolverBusyException exception, HttpServletRequest request) {
+        return buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage(), request);
+    }
+
     @ExceptionHandler(AnalysisNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleAnalysisNotFoundException(AnalysisNotFoundException exception, HttpServletRequest request) {
         return buildErrorResponse(

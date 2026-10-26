@@ -29,6 +29,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void shouldReturnGatewayTimeoutWhenAnalysisBudgetExpires() throws Exception {
+        assertErrorResponse("/test/errors/analysis-timeout", 504, "Gateway Timeout", "Analysis time limit exceeded");
+    }
+
+    @Test
+    void shouldReturnServiceUnavailableWhenDnsWorkersAreBusy() throws Exception {
+        assertErrorResponse("/test/errors/dns-busy", 503, "Service Unavailable", "DNS resolver is busy; try again later");
+    }
+
+    @Test
     void shouldReturnNotFoundWhenAnalysisDoesNotExist() throws Exception {
         assertErrorResponse(
                 "/test/errors/analysis-not-found",
@@ -121,6 +131,16 @@ class GlobalExceptionHandlerTest {
     @RestController
     @RequestMapping("/test/errors")
     static class ThrowingController {
+
+        @GetMapping("/analysis-timeout")
+        void analysisTimeout() {
+            throw new AnalysisTimeoutException();
+        }
+
+        @GetMapping("/dns-busy")
+        void dnsBusy() {
+            throw new DnsResolverBusyException();
+        }
 
         @GetMapping("/analysis-not-found")
         void analysisNotFound() {

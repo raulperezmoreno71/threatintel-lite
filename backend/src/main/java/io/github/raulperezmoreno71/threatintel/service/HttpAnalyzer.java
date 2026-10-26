@@ -1,16 +1,16 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
 import io.github.raulperezmoreno71.threatintel.exception.HttpRequestException;
+import io.github.raulperezmoreno71.threatintel.exception.AnalysisTimeoutException;
 import io.github.raulperezmoreno71.threatintel.exception.TooManyRedirectsException;
 import io.github.raulperezmoreno71.threatintel.model.HttpAnalysisResult;
 import io.github.raulperezmoreno71.threatintel.model.HttpRedirectResult;
 import io.github.raulperezmoreno71.threatintel.model.HttpRequestResult;
 import io.github.raulperezmoreno71.threatintel.model.RedirectStep;
+import io.github.raulperezmoreno71.threatintel.model.ValidatedUrl;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,21 +20,27 @@ public class HttpAnalyzer {
 
     private static final int MAX_REDIRECTS = 10;
 
-    private final HttpClient httpClient;
+    private final PinnedHttpTransport httpClient;
+    private final UrlValidator urlValidator;
 
-    public HttpAnalyzer (HttpClient httpClient) {
+    public HttpAnalyzer (PinnedHttpTransport httpClient, UrlValidator urlValidator) {
         this.httpClient = httpClient;
+        this.urlValidator = urlValidator;
     }
 
     public HttpAnalyzer() {
         this(
-                HttpClient.newBuilder()
-                        .followRedirects(HttpClient.Redirect.NEVER)
-                        .build()
+                new PinnedHttpTransport(),
+                new UrlValidator()
         );
     }
 
     public HttpRedirectResult followRedirects(String url) {
+        return followRedirects(url, AnalysisDeadline.startDefault());
+    }
+
+    public HttpRedirectResult followRedirects(String url, AnalysisDeadline deadline) {
+        deadline.check();
         List<RedirectStep> redirectChain = new ArrayList<>();
 
         long totalResponseTimeMs = 0;
@@ -43,7 +49,10 @@ public class HttpAnalyzer {
         int redirectCount = 0;
 
         while (redirectCount <= MAX_REDIRECTS) {
-            HttpRequestResult requestResult = getHttpResponse(currentUrl);
+            deadline.check();
+            ValidatedUrl target = urlValidator.validateAndResolve(currentUrl, deadline);
+            HttpRequestResult requestResult = getHttpResponse(target, deadline);
+            deadline.check();
 
             HttpResponse<String> response = requestResult.getHttpResponse();
 
@@ -110,18 +119,12 @@ public class HttpAnalyzer {
                 || statusCode == 308;
     }
 
-    private HttpRequestResult getHttpResponse (String url) {
+    private HttpRequestResult getHttpResponse (ValidatedUrl target, AnalysisDeadline deadline) {
         try {
-            HttpRequest request = HttpRequest
-                    .newBuilder(new URI(url))
-                    .build();
-
             long startTime = System.nanoTime();
 
-            HttpResponse<String> response = httpClient.send(
-                    request,
-                    HttpResponse.BodyHandlers.ofString()
-            );
+            HttpResponse<String> response = httpClient.get(target, deadline);
+            deadline.check();
 
             long endTime = System.nanoTime();
 
@@ -129,7 +132,10 @@ public class HttpAnalyzer {
 
             return new HttpRequestResult(response, responseTime);
 
+        } catch (AnalysisTimeoutException expired) {
+            throw expired;
         } catch (Exception e) {
+            deadline.check();
             throw new HttpRequestException("Could not send HTTP request", e);
         }
     }

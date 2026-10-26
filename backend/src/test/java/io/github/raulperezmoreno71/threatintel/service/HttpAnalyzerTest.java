@@ -1,19 +1,23 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
 import io.github.raulperezmoreno71.threatintel.exception.HttpRequestException;
+import io.github.raulperezmoreno71.threatintel.exception.AnalysisTimeoutException;
 import io.github.raulperezmoreno71.threatintel.exception.TooManyRedirectsException;
 import io.github.raulperezmoreno71.threatintel.model.HttpAnalysisResult;
 import io.github.raulperezmoreno71.threatintel.model.HttpRedirectResult;
 import io.github.raulperezmoreno71.threatintel.model.RedirectStep;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
-import java.net.http.HttpClient;
+import java.net.InetAddress;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicLong;
+import io.github.raulperezmoreno71.threatintel.model.ValidatedUrl;
 import java.net.http.HttpHeaders;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
@@ -25,12 +29,115 @@ import static org.mockito.Mockito.*;
 class HttpAnalyzerTest {
 
     private HttpAnalyzer httpAnalyzer;
-    private HttpClient httpClient;
+    private PinnedHttpTransport httpClient;
+    private DnsAnalyzer dnsAnalyzer;
 
     @BeforeEach
-    void setUp() {
-        httpClient = mock(HttpClient.class);
-        httpAnalyzer = new HttpAnalyzer(httpClient);
+    void setUp() throws Exception {
+        httpClient = mock(PinnedHttpTransport.class);
+        dnsAnalyzer = mock(DnsAnalyzer.class);
+        when(dnsAnalyzer.resolve(anyString(), any(AnalysisDeadline.class))).thenReturn(new InetAddress[]{InetAddress.getByName("8.8.8.8")});
+        httpAnalyzer = new HttpAnalyzer(httpClient, new UrlValidator(dnsAnalyzer));
+    }
+
+    @Test
+    void shouldNotRestartBudgetForRedirects() throws Exception {
+        AtomicLong ticker = new AtomicLong();
+        AnalysisDeadline deadline = new AnalysisDeadline(Duration.ofSeconds(15), ticker::get);
+        HttpResponse<String> response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(302);
+        when(response.headers()).thenReturn(HttpHeaders.of(Map.of("Location", List.of("/next")), (name, value) -> true));
+        when(httpClient.get(any(ValidatedUrl.class), same(deadline))).thenAnswer(invocation -> {
+            ticker.addAndGet(Duration.ofSeconds(8).toNanos());
+            return response;
+        });
+
+        assertThrows(AnalysisTimeoutException.class, () -> httpAnalyzer.followRedirects("https://example.com", deadline));
+
+        verify(httpClient, times(2)).get(any(ValidatedUrl.class), same(deadline));
+    }
+
+    @Test
+    void shouldNotWrapSharedTimeoutAsAnHttpFailure() throws Exception {
+        AnalysisTimeoutException expired = new AnalysisTimeoutException();
+        when(httpClient.get(any(ValidatedUrl.class), any(AnalysisDeadline.class))).thenThrow(expired);
+
+        assertSame(expired, assertThrows(AnalysisTimeoutException.class,
+                () -> httpAnalyzer.followRedirects("https://example.com")));
+    }
+
+    @Test
+    void shouldPassApprovedDnsSnapshotToTransportWithoutResolvingAgain() throws Exception {
+        InetAddress approved = InetAddress.getByName("8.8.8.8");
+        when(dnsAnalyzer.resolve(eq("example.com"), any(AnalysisDeadline.class))).thenReturn(
+                new InetAddress[]{approved}, new InetAddress[]{InetAddress.getByName("127.0.0.1")}
+        );
+        HttpResponse<String> response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(200);
+        when(response.headers()).thenReturn(HttpHeaders.of(Map.of(), (name, value) -> true));
+        when(httpClient.get(any(ValidatedUrl.class), any(AnalysisDeadline.class))).thenReturn(response);
+
+        httpAnalyzer.followRedirects("https://example.com/path");
+
+        ArgumentCaptor<ValidatedUrl> target = ArgumentCaptor.forClass(ValidatedUrl.class);
+        verify(httpClient).get(target.capture(), any(AnalysisDeadline.class));
+        assertEquals("https://example.com/path", target.getValue().uri().toString());
+        assertEquals(List.of(approved), target.getValue().addresses());
+        verify(dnsAnalyzer, times(1)).resolve(eq("example.com"), any(AnalysisDeadline.class));
+    }
+
+    @Test
+    void shouldRejectPrivateDestinationBeforeSendingRequest() throws Exception {
+        when(dnsAnalyzer.resolve(eq("127.0.0.1"), any(AnalysisDeadline.class))).thenReturn(new InetAddress[]{InetAddress.getByName("127.0.0.1")});
+
+        assertThrows(IllegalArgumentException.class, () -> httpAnalyzer.followRedirects("http://127.0.0.1"));
+
+        verifyNoInteractions(httpClient);
+    }
+
+    @Test
+    void shouldRejectRedirectResolvingToPrivateAddress() throws Exception {
+        when(dnsAnalyzer.resolve(eq("internal.example"), any(AnalysisDeadline.class))).thenReturn(new InetAddress[]{InetAddress.getByName("10.0.0.1")});
+        HttpResponse<String> response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(302);
+        when(response.headers()).thenReturn(HttpHeaders.of(
+                Map.of("Location", List.of("https://internal.example")), (name, value) -> true
+        ));
+        when(httpClient.get(any(ValidatedUrl.class), any(AnalysisDeadline.class))).thenReturn(response);
+
+        assertThrows(IllegalArgumentException.class, () -> httpAnalyzer.followRedirects("https://example.com"));
+
+        verify(httpClient, times(1)).get(any(ValidatedUrl.class), any(AnalysisDeadline.class));
+    }
+
+    @Test
+    void shouldRejectNonStandardPortBeforeSendingRequest() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> httpAnalyzer.followRedirects("http://example.com:8080")
+        );
+
+        verifyNoInteractions(httpClient);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"https://example.com:8443", "//example.com:8443/final"})
+    void shouldRejectRedirectToNonStandardPort(String location) throws Exception {
+        HttpResponse<String> response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(302);
+        when(response.headers()).thenReturn(HttpHeaders.of(
+                Map.of("Location", List.of(location)),
+                (name, value) -> true
+        ));
+        when(httpClient.get(any(ValidatedUrl.class), any(AnalysisDeadline.class)))
+                .thenReturn(response);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> httpAnalyzer.followRedirects("https://example.com")
+        );
+
+        verify(httpClient, times(1)).get(any(ValidatedUrl.class), any(AnalysisDeadline.class));
     }
 
     @Test
@@ -144,10 +251,7 @@ class HttpAnalyzerTest {
         when(finalResponse.statusCode()).thenReturn(200);
         when(finalResponse.headers()).thenReturn(finalHeaders);
 
-        when(httpClient.send(
-                    any(HttpRequest.class),
-                    any(HttpResponse.BodyHandler.class)
-            )
+        when(httpClient.get(any(ValidatedUrl.class), any(AnalysisDeadline.class))
         ).thenReturn(
                 redirectResponse,
                 finalResponse
@@ -178,10 +282,7 @@ class HttpAnalyzerTest {
 
         when(response.statusCode()).thenReturn(302);
         when(response.headers()).thenReturn(headers);
-        when(httpClient.send(
-                any(HttpRequest.class),
-                any(HttpResponse.BodyHandler.class)
-        )).thenReturn(response);
+        when(httpClient.get(any(ValidatedUrl.class), any(AnalysisDeadline.class))).thenReturn(response);
 
         HttpRedirectResult result = httpAnalyzer.followRedirects("https://example.com/start");
 
@@ -190,10 +291,7 @@ class HttpAnalyzerTest {
         assertEquals(302, result.getRedirectChain().get(0).getStatusCode());
         assertNull(result.getRedirectChain().get(0).getLocation());
         assertSame(response, result.getFinalResponse());
-        verify(httpClient).send(
-                any(HttpRequest.class),
-                any(HttpResponse.BodyHandler.class)
-        );
+        verify(httpClient).get(any(ValidatedUrl.class), any(AnalysisDeadline.class));
     }
 
     @Test
@@ -231,10 +329,7 @@ class HttpAnalyzerTest {
         when(response.headers()).thenReturn(headers);
 
         when(
-                httpClient.send(
-                        any(HttpRequest.class),
-                        any(HttpResponse.BodyHandler.class)
-                )
+                httpClient.get(any(ValidatedUrl.class), any(AnalysisDeadline.class))
         ).thenReturn(response);
 
         HttpRedirectResult result = httpAnalyzer.followRedirects("https://example.com");
@@ -248,10 +343,7 @@ class HttpAnalyzerTest {
         assertNull(step.getLocation());
         assertSame(response, result.getFinalResponse());
 
-        verify(httpClient, times(1)).send(
-                any(HttpRequest.class),
-                any(HttpResponse.BodyHandler.class)
-        );
+        verify(httpClient, times(1)).get(any(ValidatedUrl.class), any(AnalysisDeadline.class));
     }
 
     @Test
@@ -259,10 +351,7 @@ class HttpAnalyzerTest {
         IOException cause = new IOException("Connection failed");
 
         when(
-                httpClient.send(
-                        any(HttpRequest.class),
-                        any(HttpResponse.BodyHandler.class)
-                )
+                httpClient.get(any(ValidatedUrl.class), any(AnalysisDeadline.class))
         ).thenThrow(cause);
 
         HttpRequestException exception = assertThrows(
@@ -302,10 +391,7 @@ class HttpAnalyzerTest {
         when(finalResponse.headers()).thenReturn(finalHeaders);
 
         when(
-                httpClient.send(
-                        any(HttpRequest.class),
-                        any(HttpResponse.BodyHandler.class)
-                )
+                httpClient.get(any(ValidatedUrl.class), any(AnalysisDeadline.class))
         ).thenReturn(
                 redirectResponse,
                 finalResponse
@@ -334,10 +420,7 @@ class HttpAnalyzerTest {
         assertEquals(accumulatedTime, result.getTotalResponseTimeMs());
         assertTrue(result.getTotalResponseTimeMs() >= 0);
 
-        verify(httpClient, times(2)).send(
-                any(HttpRequest.class),
-                any(HttpResponse.BodyHandler.class)
-        );
+        verify(httpClient, times(2)).get(any(ValidatedUrl.class), any(AnalysisDeadline.class));
     }
 
     @Test
@@ -356,10 +439,7 @@ class HttpAnalyzerTest {
         when(redirectResponse.headers()).thenReturn(redirectHeaders);
 
         when(
-                httpClient.send(
-                        any(HttpRequest.class),
-                        any(HttpResponse.BodyHandler.class)
-                )
+                httpClient.get(any(ValidatedUrl.class), any(AnalysisDeadline.class))
         ).thenReturn(redirectResponse);
 
         TooManyRedirectsException exception = assertThrows(
@@ -369,9 +449,6 @@ class HttpAnalyzerTest {
 
         assertEquals("Maximum number of redirects exceeded", exception.getMessage());
 
-        verify(httpClient, times(11)).send(
-                any(HttpRequest.class),
-                any(HttpResponse.BodyHandler.class)
-        );
+        verify(httpClient, times(11)).get(any(ValidatedUrl.class), any(AnalysisDeadline.class));
     }
 }

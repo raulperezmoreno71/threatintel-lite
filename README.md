@@ -1,6 +1,6 @@
 # ThreatIntel Lite
 
-[![Backend tests](https://github.com/raulperezmoreno71/threatintel-lite/actions/workflows/tests.yml/badge.svg)](https://github.com/raulperezmoreno71/threatintel-lite/actions/workflows/tests.yml)
+[![CI/CD](https://github.com/raulperezmoreno71/threatintel-lite/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/raulperezmoreno71/threatintel-lite/actions/workflows/ci-cd.yml)
 
 ThreatIntel Lite is a full-stack web application that analyzes the technical security posture of a URL and presents the result as a structured, readable report.
 
@@ -32,12 +32,16 @@ Authentication is handled with a signed JWT stored in an HttpOnly cookie. Protec
 ### URL intelligence
 
 - HTTP and HTTPS URL validation.
+- Public-destination validation for IPv4 and IPv6, including every redirect target.
+- Standard destination ports only: HTTP on port `80` and HTTPS on port `443`.
 - Domain extraction and DNS resolution.
 - Collection of all resolved IP addresses.
 - Manual redirect tracking for `301`, `302`, `303`, `307` and `308` responses.
 - Relative redirect resolution and a maximum redirect limit.
 - Final HTTP status, URL, content type, server and declared content length.
 - Response time for each request and for the complete redirect chain.
+- Response-header inspection without downloading the response body.
+- A configurable time budget shared by the complete analysis pipeline.
 
 ### TLS certificate analysis
 
@@ -47,8 +51,29 @@ Authentication is handled with a signed JWT stored in an HttpOnly cookie. Protec
 - `GOOD`, `WARNING` or `CRITICAL` classification.
 - Renewal recommendation when the certificate is close to expiration or expired.
 - Explicit timeout, handshake and general TLS error handling.
+- Connections pinned to validated IP addresses while preserving the original hostname for SNI and certificate verification.
 
 TLS analysis is omitted for plain HTTP destinations.
+
+### Outbound network safeguards
+
+Every HTTP destination is validated before connecting, including destinations reached through relative or absolute redirects. The validator rejects private, loopback, link-local, multicast and other blocked or non-public address ranges. A hostname is rejected if any of its resolved addresses is disallowed; nonstandard destination ports are also rejected.
+
+`ValidatedUrl` carries an immutable snapshot of the approved IP addresses. `PinnedHttpTransport` uses Apache HttpClient 5 with a destination-specific DNS resolver to connect only to that snapshot, avoiding a second unrestricted DNS lookup at connection time. The original hostname remains in the request and TLS identity checks. Automatic redirects, retries, cookie management and content decompression are disabled in this transport; redirect handling stays in the analysis layer, where each hop is validated again.
+
+The transport collects status and headers, then closes the connection without consuming the response body. The separate TLS inspection also connects to approved IP addresses and enables HTTPS hostname verification and SNI.
+
+| Control | Current value or behaviour |
+|---|---|
+| Complete analysis budget | `15000` ms by default, configurable with `app.analysis.timeout-ms` |
+| HTTP connection and socket timeouts | Up to `5000` ms, capped by the remaining analysis budget |
+| TLS connection and socket timeouts | Up to `5000` ms, capped by the remaining analysis budget |
+| Redirect limit | 10 redirects after the initial request |
+| DNS concurrency | 4 resolver workers and a bounded queue of 16 tasks |
+| Deadline expiry | Active HTTP requests are cancelled and TLS sockets are closed |
+| DNS capacity exhaustion | New work is rejected with `503 Service Unavailable` |
+
+The DNS deadline bounds how long the analysis waits. A native DNS lookup may ignore thread interruption and continue in a worker; the bounded worker pool and queue prevent unlimited resolver task accumulation.
 
 ### HTTP security assessment
 
@@ -77,6 +102,7 @@ Every header receives a status, its detected value and an actionable recommendat
 - Password hashing through Spring Security's `PasswordEncoder`.
 - Credential-based login.
 - JWT authentication through an HttpOnly `access_token` cookie.
+- CSRF protection using the `XSRF-TOKEN` cookie and `X-XSRF-TOKEN` request header.
 - Current-user endpoint and protected application routes.
 - Password changes after verifying the current password.
 - Explicit logout through cookie invalidation.
@@ -112,9 +138,9 @@ threatintel-lite/
 ```text
 React client
     │
-    │ JSON over HTTP + HttpOnly authentication cookie
+    │ JSON + HttpOnly authentication cookie + CSRF header
     ▼
-Spring Security / JWT filter
+Spring Security / CSRF and JWT filters
     │
     ▼
 REST controllers
@@ -122,10 +148,10 @@ REST controllers
     ├── Account service ───────────────► User repository
     │
     ├── Analysis coordinator
-    │       ├── URL validation
+    │       ├── Public URL / IP validation
     │       ├── DNS analysis
-    │       ├── HTTP and redirects
-    │       ├── TLS certificate analysis
+    │       ├── Pinned HTTP connections and validated redirects
+    │       ├── Pinned TLS certificate analysis
     │       └── Security-header scoring
     │
     └── Analysis history service ─────► Analysis repository
@@ -135,6 +161,8 @@ REST controllers
 ```
 
 The analysis operation and persistence are intentionally separate in v1. A report is generated first and is only persisted when the user chooses **Save analysis**.
+
+One `AnalysisDeadline` is passed through URL validation, DNS resolution, HTTP redirects and TLS inspection. Each stage consumes the remaining budget instead of restarting an independent full-analysis timeout.
 
 ### Backend packages
 
@@ -169,7 +197,7 @@ frontend/src/
 
 The public landing page is pre-rendered into `dist/index.html` during the production build, so its content and links are present in the initial HTML response. React hydrates that page for navigation and interaction. Authentication and private routes use the client-rendered `dist/app.html` shell with `noindex`. React Router manages navigation and the browser sends the authentication cookie using `credentials: "include"`.
 
-The production web server must serve `index.html` only for `/`, serve `app.html` for the known application routes, and return HTTP 404 for unknown routes. A full Nginx configuration based on the VPS setup is provided in `deploy/nginx-frontend-seo.conf.example`; review it against the active configuration, validate it with `nginx -t`, and reload Nginx before relying on the new routing. The deployment script copies the complete frontend artifact. The build also copies `robots.txt`, `sitemap.xml`, the social preview image and `404.html` from `frontend/public`.
+The production web server must serve `index.html` only for `/`, serve `app.html` for the known application routes, and return HTTP 404 for unknown routes. Nginx routing and the VPS deployment script are managed on the server; validate configuration changes with `nginx -t` before reloading. The deployment workflow uploads the complete frontend artifact. The build also copies `robots.txt`, `sitemap.xml`, the social preview image and `404.html` from `frontend/public`.
 
 ## Technology stack
 
@@ -180,7 +208,7 @@ The production web server must serve `index.html` only for `/`, serve `app.html`
 | Web and security | Spring MVC, Spring Security, JWT |
 | Persistence | Spring Data JPA, Hibernate |
 | Database | PostgreSQL |
-| Networking | Java `HttpClient`, DNS APIs and JSSE |
+| Networking | Apache HttpClient 5 with pinned DNS resolution, Java HTTP response models, DNS APIs and JSSE |
 | API documentation | SpringDoc OpenAPI / Swagger UI |
 | Frontend | React 19, TypeScript 6, React Router 7 |
 | Build tooling | Maven Wrapper, Vite 8, npm |
@@ -214,6 +242,14 @@ http://localhost:8080
 
 All protected requests use the `access_token` cookie created during login. The token is not returned in the response body.
 
+### CSRF and authentication
+
+Spring Security's SPA CSRF configuration issues a readable `XSRF-TOKEN` cookie. The frontend API client copies its value to `X-XSRF-TOKEN` and sends cookies with `credentials: "include"`. Spring validates CSRF tokens on unsafe methods such as `POST` and `DELETE`, including the public registration, login and logout endpoints. Public access in the table means that a JWT is not required; it does not exempt a request from CSRF validation.
+
+For manual API calls, first make a safe request such as `GET /api/health`, retain the response cookies, and copy the `XSRF-TOKEN` value into the header of subsequent unsafe requests. After login, also retain the `access_token` cookie. Missing or mismatched CSRF tokens normally result in `403 Forbidden`.
+
+The JWT expires after one hour with the current `jwt.expiration=3600000` setting. The CSRF token has a separate lifecycle and is not the user's authentication credential.
+
 ### Authentication example
 
 Register an account:
@@ -221,6 +257,8 @@ Register an account:
 ```http
 POST /api/auth/register
 Content-Type: application/json
+Cookie: XSRF-TOKEN=<csrf-token>
+X-XSRF-TOKEN: <csrf-token>
 
 {
   "email": "user@example.com",
@@ -244,6 +282,8 @@ Sign in:
 ```http
 POST /api/auth/login
 Content-Type: application/json
+Cookie: XSRF-TOKEN=<csrf-token>
+X-XSRF-TOKEN: <csrf-token>
 
 {
   "email": "user@example.com",
@@ -267,7 +307,8 @@ The response includes the account summary and a `Set-Cookie` header containing t
 ```http
 POST /api/analyze
 Content-Type: application/json
-Cookie: access_token=<jwt>
+Cookie: access_token=<jwt>; XSRF-TOKEN=<csrf-token>
+X-XSRF-TOKEN: <csrf-token>
 
 {
   "url": "https://example.com"
@@ -327,7 +368,7 @@ The response is grouped by analysis module:
 }
 ```
 
-The example is abbreviated: a real response contains the result of all six security-header checks.
+The example uses illustrative values and is abbreviated: a real response contains the result of all six security-header checks. HTTP response times cover the outbound request through receipt of its headers; the body is not downloaded. `contentLength` is the server's declared header value, not a measured body size.
 
 ### Error contract
 
@@ -342,7 +383,16 @@ Errors use a consistent JSON structure:
 }
 ```
 
-Common responses include `400 Bad Request`, `401 Unauthorized`, `404 Not Found`, `409 Conflict` and `500 Internal Server Error`.
+Common responses include `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict` and `500 Internal Server Error`. The JSON contract above describes controller/advice and authentication-entry-point errors; security-filter errors such as CSRF rejection may use a different response representation.
+
+The analysis pipeline also exposes two explicit resource-limit responses:
+
+| Status | Message | Meaning |
+|---|---|---|
+| `503 Service Unavailable` | `DNS resolver is busy; try again later` | All resolver workers and queue slots are occupied |
+| `504 Gateway Timeout` | `Analysis time limit exceeded` | The shared analysis budget has expired |
+
+Rejected URL schemes, ports or destination IP addresses return `400 Bad Request`. An individual network or TLS failure can occur before the overall deadline and is handled separately; not every network timeout produces `504`.
 
 ### OpenAPI documentation
 
@@ -416,6 +466,19 @@ $env:JWT_SECRET = 'replace_with_a_base64_encoded_secret'
 
 Use a Base64-encoded secret with sufficient entropy for the configured HMAC algorithm. Never commit real credentials or production secrets.
 
+### Backend profiles and limits
+
+The default profile is configured for local development. Activate the production profile with `SPRING_PROFILES_ACTIVE=prod` when deploying the backend.
+
+| Property | Default profile | `prod` profile |
+|---|---|---|
+| `app.cookie.secure` | `false` | `true` |
+| `app.cors.allowed-origin` | `http://localhost:5173` | `https://threatintel.raulperezmoreno.dev` |
+| `app.analysis.timeout-ms` | `15000` | Inherits the default unless overridden |
+| `spring.jpa.hibernate.ddl-auto` | `update` | `update` |
+
+The analysis timeout must be positive. It can be overridden through Spring Boot configuration, for example with the environment variable `APP_ANALYSIS_TIMEOUT_MS=20000` for a 20-second budget. CORS and authentication-cookie security can likewise be configured with `APP_CORS_ALLOWED_ORIGIN` and `APP_COOKIE_SECURE`.
+
 ### 4. Run the backend
 
 Linux or macOS:
@@ -440,19 +503,24 @@ From a second terminal:
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-The Vite development server starts at `http://localhost:5173`. The v1 frontend expects the backend at `http://localhost:8080`, and the backend CORS configuration allows the local Vite origin.
+The Vite development server starts at `http://localhost:5173`. `frontend/.env.development` sets `VITE_API_URL=http://localhost:8080`, matching the backend's local CORS configuration. Without `VITE_API_URL`, the API client uses relative URLs for same-origin deployment.
 
 ## Testing and quality checks
 
 ### Backend
 
-The backend has 196 automated tests covering:
+The backend automated test suite covers:
 
 - URL, DNS, HTTP, redirect, TLS and security-header analysis.
+- SSRF destination rules, blocked IPv4/IPv6 ranges, ports and redirect validation.
+- Pinned-IP HTTP connections, isolated DNS snapshots and original-host preservation.
+- Real local TLS handshakes, SNI, hostname verification and certificate trust failures.
+- Header-only HTTP handling without waiting for response bodies.
+- Shared deadlines, slow headers, cancelled TLS operations and DNS queue saturation.
 - Weighted security-score calculation.
 - User registration, login, current-user lookup and password changes.
 - Analysis orchestration and persistence mapping.
@@ -463,6 +531,8 @@ The backend has 196 automated tests covering:
 - Repository ownership, relationships, constraints and cascade behaviour.
 - Full Spring context startup.
 - PostgreSQL persistence through Testcontainers.
+
+Network integration tests use controlled local HTTP/TLS peers and test-only certificate fixtures. These fixtures inject destinations at the transport boundary; they do not relax production URL validation or trust settings. The test certificate and its public test credentials are documented in `backend/src/test/resources/tls/README.md`.
 
 Docker must be running because the repository and application-context tests start real PostgreSQL containers.
 
@@ -482,7 +552,7 @@ cd backend
 
 ### Frontend
 
-The frontend has 64 automated tests covering:
+The frontend automated test suite covers:
 
 - Registration, login and password-change forms.
 - Session checks, expiration handling and logout flows.
@@ -507,29 +577,30 @@ For an interactive Vitest watch session during development, run:
 npm test
 ```
 
-The GitHub Actions workflow runs the backend and frontend jobs independently on every push and pull request. The backend job executes the Maven test suite, while the frontend job installs locked dependencies with `npm ci` and then runs Vitest, ESLint and the production build.
+The `CI/CD` GitHub Actions workflow runs backend and frontend checks independently for pull requests and pushes to `main`. The backend job executes the Maven test suite; the frontend job installs locked dependencies with `npm ci` and runs Vitest, ESLint and the production build.
+
+On a push to `main`, deployment runs only after both jobs pass. It packages the backend JAR, builds the frontend including pre-rendering, transfers the artifacts to the VPS over SSH, and invokes the server's deployment script. This job requires the repository secrets `VPS_HOST`, `VPS_USER` and `VPS_SSH_KEY`, plus the corresponding staging directories and deployment script on the server.
 
 ## Current v1 boundaries
 
-Version 1 is feature-complete for its intended learning and portfolio scope, but it should be hardened before exposure as a public production service:
+Version 1 includes public-destination validation, pinned outbound connections, shared analysis deadlines, CSRF protection and a production configuration profile. The following boundaries remain:
 
-- URL analysis does not yet block private, loopback or link-local destinations. Deployments must restrict access until SSRF protection is added.
-- HTTP connection, response-size and total-analysis limits require further hardening.
 - Analysis persistence currently accepts the completed report returned by the client.
-- Cookie security and CORS values are configured for local development.
+- Request DTOs do not yet have comprehensive Bean Validation constraints.
+- Application-wide rate limiting and per-user analysis quotas are not implemented.
+- A native DNS lookup can outlive the caller's deadline; resolver capacity is bounded and overload is reported explicitly.
+- Invalid or untrusted HTTPS certificates can stop the analysis during the HTTP handshake before a certificate report is produced.
 - Database schema changes currently rely on Hibernate rather than versioned migrations.
 - Saved-analysis listings are not paginated.
-- The frontend API origin is currently configured for the local backend.
 - End-to-end browser tests are planned for a later iteration.
 
 These constraints are documented explicitly so that the current guarantees of the application are clear.
 
 ## Roadmap beyond v1
 
-- SSRF-safe URL and redirect validation.
-- Bounded HTTP requests and configurable network policies.
+- Application-wide rate limiting and per-user analysis quotas.
+- Further operational tuning of network limits and resolver capacity.
 - Server-authoritative analysis persistence.
-- Environment-specific cookie, CORS and deployment configuration.
 - Bean Validation for API request contracts.
 - Versioned database migrations.
 - Paginated analysis history and lightweight list projections.
@@ -542,7 +613,7 @@ These constraints are documented explicitly so that the current guarantees of th
 
 ThreatIntel Lite v1 is a consolidated first release: its main analysis, account, persistence and user-interface flows are implemented and backed by comprehensive backend and frontend test suites.
 
-Development after this milestone is focused on production hardening, operational configuration, performance and end-to-end browser coverage rather than completing the initial product workflow.
+The current backend adds network safeguards and deadline enforcement to that baseline. Further development focuses on authoritative persistence, input validation, database migrations, operational observability, performance and end-to-end browser coverage.
 
 ## Author
 

@@ -8,8 +8,11 @@ import io.github.raulperezmoreno71.threatintel.repository.AnalysisRepository;
 import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,14 +25,17 @@ public class AnalyzeService {
     private final SslAnalyzer sslAnalyzer;
     private final SecurityHeadersAnalyzer securityHeadersAnalyzer;
     private final SecurityAssessmentCalculator securityAssessmentCalculator;
+    private final Duration analysisTimeout;
 
+    @Autowired
     public AnalyzeService (
             UrlValidator urlValidator,
             DnsAnalyzer dnsAnalyzer,
             HttpAnalyzer httpAnalyzer,
             SslAnalyzer sslAnalyzer,
             SecurityHeadersAnalyzer securityHeadersAnalyzer,
-            SecurityAssessmentCalculator securityAssessmentCalculator
+            SecurityAssessmentCalculator securityAssessmentCalculator,
+            @Value("${app.analysis.timeout-ms:15000}") long timeoutMs
     ) {
         this.urlValidator = urlValidator;
         this.dnsAnalyzer = dnsAnalyzer;
@@ -37,30 +43,50 @@ public class AnalyzeService {
         this.sslAnalyzer = sslAnalyzer;
         this.securityHeadersAnalyzer = securityHeadersAnalyzer;
         this.securityAssessmentCalculator = securityAssessmentCalculator;
+        if (timeoutMs <= 0) {
+            throw new IllegalArgumentException("Analysis timeout must be positive");
+        }
+        this.analysisTimeout = Duration.ofMillis(timeoutMs);
+    }
+
+    public AnalyzeService(UrlValidator urlValidator, DnsAnalyzer dnsAnalyzer, HttpAnalyzer httpAnalyzer,
+                          SslAnalyzer sslAnalyzer, SecurityHeadersAnalyzer securityHeadersAnalyzer,
+                          SecurityAssessmentCalculator securityAssessmentCalculator) {
+        this(urlValidator, dnsAnalyzer, httpAnalyzer, sslAnalyzer, securityHeadersAnalyzer, securityAssessmentCalculator, 15000);
     }
 
     public AnalyzeResponse analyze (AnalyzeRequest request) {
+        return analyze(request, AnalysisDeadline.start(analysisTimeout));
+    }
+
+    AnalyzeResponse analyze(AnalyzeRequest request, AnalysisDeadline deadline) {
+        deadline.check();
         String url = request.getUrl();
 
-        urlValidator.validate(url);
+        urlValidator.validate(url, deadline);
+        deadline.check();
 
         String domain = extractDomain(url);
 
-        DnsAnalysisResult dns = dnsAnalyzer.analyze(domain);
+        DnsAnalysisResult dns = dnsAnalyzer.analyze(domain, deadline);
+        deadline.check();
 
-        HttpRedirectResult redirectResult = httpAnalyzer.followRedirects(url);
+        HttpRedirectResult redirectResult = httpAnalyzer.followRedirects(url, deadline);
+        deadline.check();
 
         HttpAnalysisResult http = httpAnalyzer.analyzeResponse(redirectResult);
 
         String finalUrl = http.getFinalUrl();
         String finalDomain = extractDomain(finalUrl);
 
-        SslAnalysisResult ssl = sslAnalyzer.analyze(finalUrl, finalDomain);
+        SslAnalysisResult ssl = sslAnalyzer.analyze(finalUrl, finalDomain, deadline);
+        deadline.check();
 
         SecurityHeadersAnalysisResult securityHeaders = securityHeadersAnalyzer.analyze(redirectResult.getFinalResponse());
 
         SecurityAssessmentResult securityAssessment = securityAssessmentCalculator.calculate(securityHeaders);
 
+        deadline.check();
         return new AnalyzeResponse(
                 "URL analyzed successfully",
                 url,
