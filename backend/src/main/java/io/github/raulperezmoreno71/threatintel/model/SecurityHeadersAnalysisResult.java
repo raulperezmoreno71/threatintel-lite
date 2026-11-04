@@ -1,6 +1,8 @@
 package io.github.raulperezmoreno71.threatintel.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 @Schema(
         description = "Contains the analysis result of the evaluated HTTP security headers."
@@ -10,31 +12,43 @@ public class SecurityHeadersAnalysisResult {
     @Schema(
             description = "Analysis of the HTTP Strict-Transport-Security (HSTS) header."
     )
+    @NotNull(message = "HSTS result is required")
+    @Valid
     private SecurityHeaderResult strictTransportSecurity;
 
     @Schema(
             description = "Analysis of the Content-Security-Policy (CSP) header."
     )
+    @NotNull(message = "CSP result is required")
+    @Valid
     private SecurityHeaderResult contentSecurityPolicy;
 
     @Schema(
             description = "Analysis of the X-Frame-Options header."
     )
+    @NotNull(message = "X-Frame-Options result is required")
+    @Valid
     private SecurityHeaderResult xFrameOptions;
 
     @Schema(
             description = "Analysis of the X-Content-Type-Options header."
     )
+    @NotNull(message = "X-Content-Type-Options result is required")
+    @Valid
     private SecurityHeaderResult xContentTypeOptions;
 
     @Schema(
             description = "Analysis of the Referrer-Policy header."
     )
+    @NotNull(message = "Referrer-Policy result is required")
+    @Valid
     private SecurityHeaderResult referrerPolicy;
 
     @Schema(
             description = "Analysis of the Permission-Policy header."
     )
+    @NotNull(message = "Permissions-Policy result is required")
+    @Valid
     private SecurityHeaderResult permissionsPolicy;
 
     public SecurityHeadersAnalysisResult() {

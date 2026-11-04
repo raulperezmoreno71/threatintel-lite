@@ -562,6 +562,31 @@ npm run dev
 
 The Vite development server starts at `http://localhost:5173`. `frontend/.env.development` sets `VITE_API_URL=http://localhost:8080`, matching the backend's local CORS configuration. Without `VITE_API_URL`, the API client uses relative URLs for same-origin deployment.
 
+## Request validation
+
+Registration, login, password changes and analysis requests use Jakarta Bean Validation.
+Controllers apply `@Valid` before invoking services and return HTTP `400` for invalid fields,
+using the existing `status`, `error`, `message` and `path` error contract. Validation messages
+identify the field and rule without including the submitted value.
+
+- Registration and login require a nonblank, valid email address of at most 255 characters.
+- New passwords at registration and password change must be nonblank and contain 8–64 characters.
+- Login passwords and current passwords must be nonblank; the new minimum is not applied to existing credentials.
+- Analysis URLs must be nonblank and at most 2048 characters. Network destination and SSRF checks remain in `UrlValidator`.
+
+Saved reports at `POST /api/analyses` are also validated recursively before persistence:
+
+- DNS, HTTP, all six security-header results and the security assessment are required.
+- TLS is optional; when supplied, its issuer, subject, dates, remaining days and status are required. Negative remaining days are allowed for expired certificates.
+- DNS lists contain 1–64 nonblank entries of at most 45 characters. HTTP chains contain 1–11 nonnull steps (up to 10 redirects plus the final response).
+- HTTP status codes range from 100 to 599. Response times and optional content lengths cannot be negative.
+- Scores range from 0 to 100, grades are A/B/C/D/F, and individual header counts range from 0 to 6.
+- Saved URLs, redirect locations and ordinary metadata strings are limited to 255 characters to match the current database columns; domains are limited to 253. Analysis requests may still use URLs of up to 2048 characters, but saving longer URLs requires a future schema change.
+- Security-header values are limited to 8192 characters and their recommendations to 2048; certificate recommendations retain the database limit of 255.
+- Missing numeric and boolean fields are rejected instead of being treated as zero or false. Optional HTTP metadata, absent header values and optional recommendations may remain null.
+
+These checks validate report structure and bounds, not the authenticity or cross-field consistency of client-supplied analysis results. Report saving performs no new outbound network requests.
+
 ## Testing and quality checks
 
 ### Backend

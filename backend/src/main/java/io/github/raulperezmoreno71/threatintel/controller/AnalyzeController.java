@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api")
@@ -102,7 +103,7 @@ public class AnalyzeController {
             )
     })
     @PostMapping("/analyze")
-    public AnalyzeResponse analyze (@RequestBody AnalyzeRequest request, Principal principal) {
+    public AnalyzeResponse analyze (@Valid @RequestBody AnalyzeRequest request, Principal principal) {
         User user = userService.getByEmail(principal.getName());
 
         if (!analysisRateLimitService.tryAcquire(user.getId())) {

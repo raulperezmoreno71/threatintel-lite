@@ -3,6 +3,7 @@ package io.github.raulperezmoreno71.threatintel.controller;
 import io.github.raulperezmoreno71.threatintel.dto.AnalysisHistoryResponse;
 import io.github.raulperezmoreno71.threatintel.dto.ErrorResponse;
 import io.github.raulperezmoreno71.threatintel.dto.SaveAnalysisRequest;
+import jakarta.validation.Valid;
 import io.github.raulperezmoreno71.threatintel.service.AnalysisHistoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -135,7 +136,7 @@ public class AnalysisHistoryController {
     })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public void saveAnalysis(@RequestBody SaveAnalysisRequest request) {
+    public void saveAnalysis(@Valid @RequestBody SaveAnalysisRequest request) {
         analysisHistoryService.saveAnalysis(request);
     }
 }

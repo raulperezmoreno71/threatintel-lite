@@ -1,6 +1,9 @@
 package io.github.raulperezmoreno71.threatintel.model;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
@@ -12,7 +15,10 @@ public class DnsAnalysisResult {
             description = "List of IP addresses returned by the DNS resolution.",
             example = "[\"140.82.121.3\", \"140.82.121.4\"]"
     )
-    private List<String> ips;
+    @NotEmpty(message = "At least one IP address is required")
+    @Size(max = 64, message = "At most 64 IP addresses are allowed")
+    private List<@NotBlank(message = "IP address must not be blank")
+            @Size(max = 45, message = "IP address must not exceed 45 characters") String> ips;
 
     public DnsAnalysisResult () {
 

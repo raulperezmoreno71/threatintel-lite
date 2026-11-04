@@ -7,9 +7,23 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException exception, HttpServletRequest request) {
+        String message = exception.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .distinct()
+                .sorted()
+                .collect(Collectors.joining("; "));
+
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request);
+    }
 
     @ExceptionHandler(AnalysisTimeoutException.class)
     public ResponseEntity<ErrorResponse> handleAnalysisTimeout(AnalysisTimeoutException exception, HttpServletRequest request) {

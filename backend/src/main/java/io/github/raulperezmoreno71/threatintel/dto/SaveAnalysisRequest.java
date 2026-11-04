@@ -3,6 +3,10 @@ package io.github.raulperezmoreno71.threatintel.dto;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import io.github.raulperezmoreno71.threatintel.model.*;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 @JsonPropertyOrder({
         "message",
@@ -24,43 +28,57 @@ public class SaveAnalysisRequest {
             description = "Analysis execution result message.",
             example = "URL analyzed successfully."
     )
+    @Size(max = 255, message = "Message must not exceed 255 characters")
     private String message;
 
     @Schema(
             description = "Normalized URL that was analyzed.",
             example = "https://github.com"
     )
+    @NotBlank(message = "URL is required")
+    @Size(max = 255, message = "Saved URL must not exceed 255 characters")
     private String url;
 
     @Schema(
             description = "Extracted domain name.",
             example = "github.com"
     )
+    @NotBlank(message = "Domain is required")
+    @Size(max = 253, message = "Domain must not exceed 253 characters")
     private String domain;
 
     @Schema(
             description = "DNS resolution results."
     )
+    @NotNull(message = "DNS results are required")
+    @Valid
     private DnsAnalysisResult dns;
 
     @Schema(
             description = "HTTP response analysis."
     )
+    @NotNull(message = "HTTP results are required")
+    @Valid
     private HttpAnalysisResult http;
 
     @Schema(
             description = "SSL/TLS certificate analysis."
     )
+    @Valid
     private SslAnalysisResult ssl;
 
     @Schema(
             description = "Assessment of common HTTP security headers."
     )
+    @NotNull(message = "Security header results are required")
+    @Valid
     private SecurityHeadersAnalysisResult securityHeaders;
 
     @Schema(
             description = "Overall website security assessment calculated from the analyzed security headers."
     )
+    @NotNull(message = "Security assessment is required")
+    @Valid
     private SecurityAssessmentResult securityAssessment;
 
     public SaveAnalysisRequest () {

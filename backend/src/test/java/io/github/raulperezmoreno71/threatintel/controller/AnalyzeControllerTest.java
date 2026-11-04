@@ -134,15 +134,8 @@ class AnalyzeControllerTest {
     }
 
     @Test
-    void shouldReturnBadRequestWhenUrlIsInvalid() throws Exception {
+    void shouldRejectBlankUrlBeforeAnalysis() throws Exception {
         AnalyzeRequest request = new AnalyzeRequest("  ");
-
-        when(analyzeService.analyze(any(AnalyzeRequest.class)))
-                .thenThrow(
-                        new IllegalArgumentException(
-                                "URL cannot be null or blank"
-                        )
-                );
 
         mockMvc.perform(
                         post("/api/analyze")
@@ -159,17 +152,13 @@ class AnalyzeControllerTest {
                         jsonPath("$.error").value("Bad Request")
                 )
                 .andExpect(
-                        jsonPath("$.message").value("URL cannot be null or blank")
+                        jsonPath("$.message").value("url: URL cannot be null or blank")
                 )
                 .andExpect(
                         jsonPath("$.path").value("/api/analyze")
                 );
 
-        verify(analyzeService).analyze(
-                argThat(
-                        analyzeRequest -> "  ".equals(analyzeRequest.getUrl())
-                )
-        );
+        verifyNoInteractions(analyzeService);
     }
 
     @Test
