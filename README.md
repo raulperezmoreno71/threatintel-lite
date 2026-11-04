@@ -84,7 +84,22 @@ Admission is checked before URL validation and outbound network work. An admitte
 
 `AnalysisRateLimitService` synchronizes admission checks to enforce the limit for concurrent requests within one backend instance. It removes inactive user entries with a scheduled cleanup every 60 seconds; expired attempts are also discarded during admission, so recovery does not depend on waiting for cleanup.
 
-Counters are stored in memory. Restarting the backend resets them, and multiple backend instances do not share the same counters. The policy applies only to URL analysis, not registration, login or other API endpoints.
+Counters are stored in memory. Restarting the backend resets them, and multiple backend instances do not share the same counters. This policy applies only to URL analysis; login has a separate policy below, and registration is not rate-limited in the application.
+
+### Per-email login rate limiting
+
+`POST /api/auth/login` allows **5 failed credential checks per email in a rolling 300-second window** by default. The next attempt returns the standard `429` error body and a `Retry-After` header before credentials are checked or a token is issued. Unknown emails and incorrect passwords follow the same policy. The key is the exact email supplied to authentication, matching the current case-sensitive database lookup; the limiter does not independently trim or lowercase it.
+
+Each request reserves a slot before authentication. Failed checks become timestamped failures; successful authentication clears earlier failures. Completing an older pending failure after a successful login does not reintroduce the cleared failures. Other pending requests retain their reservations, preventing concurrent requests from bypassing the limit. If all capacity is occupied by pending checks, `Retry-After` suggests a one-second retry; otherwise it reports the time until the oldest failure expires, rounded up.
+
+Invalid request bodies and internal authentication errors do not add credential failures. Aborted requests release their reservations. Rejected attempts do not extend the window. Expired failures are removed on admission and by scheduled cleanup every 60 seconds; entries with active requests are retained until those requests finish.
+
+```properties
+app.auth.login.rate-limit.max-failures=5
+app.auth.login.rate-limit.window-seconds=300
+```
+
+Both settings must be positive. Counters are in memory, reset on restart and are independent for each backend instance. This does not throttle registration, attempts spread across different emails, or traffic by IP. Someone targeting a known email can temporarily consume its allowance; this policy does not permanently disable the account.
 
 ### HTTP security assessment
 
@@ -666,8 +681,8 @@ On a push to `main`, deployment runs only after both jobs pass. It packages the 
 Version 1 includes public-destination validation, pinned outbound connections, shared analysis deadlines, per-user analysis rate limiting, CSRF protection and a production configuration profile. The following boundaries remain:
 
 - Analysis persistence currently accepts the completed report returned by the client.
-- Request DTOs do not yet have comprehensive Bean Validation constraints.
-- Analysis rate-limit counters are local to each backend instance and reset on restart. Shared counters and application-wide throttling for other endpoints are not implemented.
+- API input and nested saved reports have Bean Validation constraints, but client-supplied report authenticity and cross-field consistency are not verified.
+- Analysis and login rate-limit counters are local to each backend instance and reset on restart. Shared counters, registration throttling and IP-based throttling are not implemented.
 - A native DNS lookup can outlive the caller's deadline; resolver capacity is bounded and overload is reported explicitly.
 - Invalid or untrusted HTTPS certificates can stop the analysis during the HTTP handshake before a certificate report is produced.
 - Database schema changes currently rely on Hibernate rather than versioned migrations.
@@ -681,7 +696,7 @@ These constraints are documented explicitly so that the current guarantees of th
 - Shared rate-limit counters for multi-instance deployments and throttling for other endpoints.
 - Further operational tuning of network limits and resolver capacity.
 - Server-authoritative analysis persistence.
-- Bean Validation for API request contracts.
+- Further report consistency checks beyond the implemented API request validation.
 - Versioned database migrations.
 - Paginated analysis history and lightweight list projections.
 - Shared frontend session management and protected-route layout.

@@ -12,6 +12,8 @@ import io.github.raulperezmoreno71.threatintel.model.UserStatus;
 import io.github.raulperezmoreno71.threatintel.security.CustomAuthenticationEntryPoint;
 import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
+import io.github.raulperezmoreno71.threatintel.service.LoginRateLimitService;
+import org.junit.jupiter.api.BeforeEach;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.Cookie;
@@ -55,6 +57,14 @@ class UserControllerTest {
 
     @MockitoBean
     private JwtService jwtService;
+
+    @MockitoBean
+    private LoginRateLimitService loginRateLimitService;
+
+    @BeforeEach
+    void allowLoginAttempts() {
+        when(loginRateLimitService.acquire(anyString())).thenReturn(mock(LoginRateLimitService.Attempt.class));
+    }
 
     @Test
     void shouldRegisterUserSuccessfully() throws Exception {

@@ -4,9 +4,12 @@ import io.github.raulperezmoreno71.threatintel.dto.ChangePasswordRequest;
 import io.github.raulperezmoreno71.threatintel.dto.ErrorResponse;
 import io.github.raulperezmoreno71.threatintel.dto.auth.*;
 import io.github.raulperezmoreno71.threatintel.entity.User;
+import io.github.raulperezmoreno71.threatintel.exception.InvalidCredentialException;
+import io.github.raulperezmoreno71.threatintel.service.LoginRateLimitService;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,13 +35,15 @@ public class UserController {
 
     private final UserService userService;
     private final JwtService jwtService;
+    private final LoginRateLimitService loginRateLimitService;
 
     @Value("${app.cookie.secure}")
     private boolean cookieSecure;
 
-    public UserController(UserService userService, JwtService jwtService) {
+    public UserController(UserService userService, JwtService jwtService, LoginRateLimitService loginRateLimitService) {
         this.userService = userService;
         this.jwtService = jwtService;
+        this.loginRateLimitService = loginRateLimitService;
     }
 
     @Operation(
@@ -149,11 +154,27 @@ public class UserController {
                                             """
                             )
                     )
+            ),
+            @ApiResponse(
+                    responseCode = "429",
+                    description = "Login attempt limit reached for this email",
+                    headers = @Header(name = "Retry-After", description = "Seconds before retrying",
+                            schema = @Schema(type = "integer", format = "int64")),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        User user = userService.login(request);
+        User user;
+        try (var attempt = loginRateLimitService.acquire(request.getEmail())) {
+            try {
+                user = userService.login(request);
+            } catch (InvalidCredentialException invalidCredentials) {
+                attempt.failed();
+                throw invalidCredentials;
+            }
+            attempt.succeeded();
+        }
 
         String token = jwtService.generateToken(user);
 

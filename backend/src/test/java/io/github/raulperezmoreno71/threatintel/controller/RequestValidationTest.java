@@ -10,6 +10,8 @@ import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
 import io.github.raulperezmoreno71.threatintel.service.AnalysisRateLimitService;
 import io.github.raulperezmoreno71.threatintel.service.AnalyzeService;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
+import io.github.raulperezmoreno71.threatintel.service.LoginRateLimitService;
+import org.junit.jupiter.api.BeforeEach;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -35,6 +37,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -50,6 +53,12 @@ class RequestValidationTest {
     @MockitoBean private JwtService jwtService;
     @MockitoBean private AnalyzeService analyzeService;
     @MockitoBean private AnalysisRateLimitService rateLimitService;
+    @MockitoBean private LoginRateLimitService loginRateLimitService;
+
+    @BeforeEach
+    void allowLoginAttempts() {
+        when(loginRateLimitService.acquire(any())).thenReturn(mock(LoginRateLimitService.Attempt.class));
+    }
 
     static Stream<Arguments> invalidRequests() {
         return Stream.of(
@@ -87,7 +96,7 @@ class RequestValidationTest {
                 .andExpect(content().string(not(containsString("password123"))))
                 .andExpect(content().string(not(containsString("old-password"))));
 
-        verifyNoInteractions(userService, analyzeService, rateLimitService, jwtService);
+        verifyNoInteractions(userService, analyzeService, rateLimitService, jwtService, loginRateLimitService);
     }
 
     @ParameterizedTest
