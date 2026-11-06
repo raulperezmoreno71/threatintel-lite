@@ -27,6 +27,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
@@ -201,12 +206,17 @@ class AnalyzeControllerTest {
                         jsonPath("$.error").value("Internal Server Error")
                 )
                 .andExpect(
-                        jsonPath("$.message")
-                                .value("Could not analyze SSL certificate")
-                )
-                .andExpect(
                         jsonPath("$.path").value("/api/analyze")
-                );
+                )
+                .andExpect(result -> {
+                    String incidentId = result.getResponse().getHeader("X-Error-ID");
+                    assertNotNull(incidentId);
+                    assertEquals(incidentId, UUID.fromString(incidentId).toString());
+                    String body = result.getResponse().getContentAsString();
+                    assertEquals("An unexpected error occurred. Please try again later. Reference: " + incidentId,
+                            objectMapper.readTree(body).get("message").asString());
+                    assertFalse(body.contains("Could not analyze SSL certificate"));
+                });
 
         verify(analyzeService).analyze(
                 argThat(

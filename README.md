@@ -477,6 +477,8 @@ Errors use a consistent JSON structure:
 
 Common responses include `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict` and `500 Internal Server Error`. The JSON contract above describes controller/advice and authentication-entry-point errors; security-filter errors such as CSRF rejection may use a different response representation.
 
+Unexpected runtime failures return `500` with the generic message `An unexpected error occurred. Please try again later. Reference: <UUID>`. A fresh server-generated incident UUID appears in both `message` and the `X-Error-ID` response header, so clients can quote the reference without changes to the four JSON fields above. Client-provided request or correlation IDs are not reused. The server logs the same UUID and the original exception with its stack trace, without adding request bodies, credentials, cookies, authorization headers or target URLs/query strings to that log entry. Expected validation, malformed JSON, authentication, not-found, conflict, rate-limit, analysis-timeout and DNS-overload errors retain their specific statuses and actionable messages; the login rate-limit response also retains `Retry-After`.
+
 The analysis endpoint also exposes these explicit resource-limit responses:
 
 | Status | Message | Meaning |

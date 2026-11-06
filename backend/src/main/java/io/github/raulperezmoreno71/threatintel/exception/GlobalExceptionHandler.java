@@ -2,6 +2,8 @@ package io.github.raulperezmoreno71.threatintel.exception;
 
 import io.github.raulperezmoreno71.threatintel.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -10,10 +12,13 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(PendingAnalysisException.class)
     public ResponseEntity<ErrorResponse> handlePendingAnalysis(PendingAnalysisException exception, HttpServletRequest request) {
@@ -88,11 +93,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleRuntimeException (RuntimeException exception, HttpServletRequest request) {
-        return buildErrorResponse(
+        String incidentId = UUID.randomUUID().toString();
+        log.error("Unexpected error; incident ID: {}", incidentId, exception);
+        ResponseEntity<ErrorResponse> response = buildErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
-                exception.getMessage(),
+                "An unexpected error occurred. Please try again later. Reference: " + incidentId,
                 request
         );
+        return ResponseEntity.status(response.getStatusCode())
+                .header("X-Error-ID", incidentId)
+                .body(response.getBody());
     }
 
     @ExceptionHandler(EmailAlreadyExistException.class)
