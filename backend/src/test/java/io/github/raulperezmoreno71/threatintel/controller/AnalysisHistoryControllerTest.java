@@ -17,6 +17,7 @@ import io.github.raulperezmoreno71.threatintel.security.CustomAuthenticationEntr
 import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
 import io.github.raulperezmoreno71.threatintel.service.AnalysisHistoryService;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
+import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -66,6 +67,9 @@ class AnalysisHistoryControllerTest {
 
     @MockitoBean
     private JwtService jwtService;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @Test
     void shouldReturnAnalysisById() throws Exception {

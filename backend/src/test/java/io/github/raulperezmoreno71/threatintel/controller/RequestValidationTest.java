@@ -10,6 +10,7 @@ import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
 import io.github.raulperezmoreno71.threatintel.service.AnalysisRateLimitService;
 import io.github.raulperezmoreno71.threatintel.service.AnalyzeService;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
+import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
 import io.github.raulperezmoreno71.threatintel.service.LoginRateLimitService;
 import org.junit.jupiter.api.BeforeEach;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
@@ -51,6 +52,7 @@ class RequestValidationTest {
     @Autowired private ObjectMapper objectMapper;
     @MockitoBean private UserService userService;
     @MockitoBean private JwtService jwtService;
+    @MockitoBean private UserRepository userRepository;
     @MockitoBean private AnalyzeService analyzeService;
     @MockitoBean private AnalysisRateLimitService rateLimitService;
     @MockitoBean private LoginRateLimitService loginRateLimitService;

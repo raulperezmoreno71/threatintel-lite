@@ -1,7 +1,9 @@
 package io.github.raulperezmoreno71.threatintel.service;
 
 import io.github.raulperezmoreno71.threatintel.entity.User;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +30,7 @@ public class JwtService {
 
         return Jwts.builder()
                 .subject(user.getEmail())
+                .claim("sessionVersion", user.getSessionVersion())
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(signingKey)
@@ -35,11 +38,34 @@ public class JwtService {
     }
 
     public String extractEmail(String token) {
+        return readSignedClaims(token).getSubject();
+    }
+
+    public TokenIdentity parseToken(String token) {
+        Claims claims = readSignedClaims(token);
+        String email = claims.getSubject();
+        if (email == null || email.isBlank()) {
+            throw new MalformedJwtException("Token subject is required");
+        }
+        if (claims.getExpiration() == null) {
+            throw new MalformedJwtException("Token expiration is required");
+        }
+
+        Object version = claims.get("sessionVersion");
+        if (!(version instanceof Integer || version instanceof Long)
+                || ((Number) version).longValue() < 0) {
+            throw new MalformedJwtException("Token session version must be a nonnegative integer");
+        }
+        return new TokenIdentity(email, ((Number) version).longValue());
+    }
+
+    private Claims readSignedClaims(String token) {
         return Jwts.parser()
                 .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+                .getPayload();
     }
+
+    public record TokenIdentity(String email, long sessionVersion) { }
 }

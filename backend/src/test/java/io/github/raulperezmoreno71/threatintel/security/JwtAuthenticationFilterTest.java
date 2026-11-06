@@ -1,6 +1,9 @@
 package io.github.raulperezmoreno71.threatintel.security;
 
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
+import io.github.raulperezmoreno71.threatintel.entity.User;
+import io.github.raulperezmoreno71.threatintel.model.UserStatus;
+import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.Cookie;
@@ -13,15 +16,18 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.Collections;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class JwtAuthenticationFilterTest {
     private JwtService jwtService;
+    private UserRepository userRepository;
     private CustomAuthenticationEntryPoint authenticationEntryPoint;
     private JwtAuthenticationFilter filter;
     private HttpServletRequest request;
@@ -31,10 +37,14 @@ class JwtAuthenticationFilterTest {
     @BeforeEach
     void setUp() {
         jwtService = mock(JwtService.class);
+        userRepository = mock(UserRepository.class);
+        when(userRepository.findByEmail("user@example.com"))
+                .thenReturn(Optional.of(new User("user@example.com", "hash", UserStatus.ACTIVE)));
         authenticationEntryPoint = mock(CustomAuthenticationEntryPoint.class);
         filter = new JwtAuthenticationFilter(
                 jwtService,
-                authenticationEntryPoint
+                authenticationEntryPoint,
+                userRepository
         );
 
         request = mock(HttpServletRequest.class);
@@ -98,7 +108,7 @@ class JwtAuthenticationFilterTest {
         Cookie cookie = new Cookie("access_token", "valid-token");
 
         when(request.getCookies()).thenReturn(new Cookie[]{cookie});
-        when(jwtService.extractEmail("valid-token")).thenReturn("user@example.com");
+        when(jwtService.parseToken("valid-token")).thenReturn(new JwtService.TokenIdentity("user@example.com", 0));
 
         filter.doFilterInternal(request, response, filterChain);
 
@@ -122,8 +132,8 @@ class JwtAuthenticationFilterTest {
                 accessTokenCookie,
                 sessionCookie
         });
-        when(jwtService.extractEmail("valid-token"))
-                .thenReturn("user@example.com");
+        when(jwtService.parseToken("valid-token"))
+                .thenReturn(new JwtService.TokenIdentity("user@example.com", 0));
 
         filter.doFilterInternal(request, response, filterChain);
 
@@ -133,7 +143,7 @@ class JwtAuthenticationFilterTest {
         assertNotNull(authentication);
         assertEquals("user@example.com", authentication.getName());
 
-        verify(jwtService).extractEmail("valid-token");
+        verify(jwtService).parseToken("valid-token");
         verify(filterChain).doFilter(request, response);
     }
 
@@ -151,8 +161,10 @@ class JwtAuthenticationFilterTest {
                 .setAuthentication(existingAuthentication);
 
         when(request.getCookies()).thenReturn(new Cookie[]{cookie});
-        when(jwtService.extractEmail("valid-token"))
-                .thenReturn("different@example.com");
+        when(jwtService.parseToken("valid-token"))
+                .thenReturn(new JwtService.TokenIdentity("different@example.com", 0));
+        when(userRepository.findByEmail("different@example.com"))
+                .thenReturn(Optional.of(new User("different@example.com", "hash", UserStatus.ACTIVE)));
 
         filter.doFilterInternal(request, response, filterChain);
 
@@ -161,24 +173,25 @@ class JwtAuthenticationFilterTest {
                 SecurityContextHolder.getContext().getAuthentication()
         );
 
-        verify(jwtService).extractEmail("valid-token");
+        verify(jwtService).parseToken("valid-token");
         verify(filterChain).doFilter(request, response);
     }
 
     @Test
-    void shouldContinueWithoutAuthenticationWhenTokenHasNoEmail() throws Exception {
+    void shouldRejectTokenWithoutEmailBeforeDatabaseLookup() throws Exception {
         Cookie cookie = new Cookie("access_token", "token-without-email");
 
         when(request.getCookies()).thenReturn(new Cookie[]{cookie});
-        when(jwtService.extractEmail("token-without-email"))
-                .thenReturn(null);
+        when(jwtService.parseToken("token-without-email"))
+                .thenThrow(new JwtException("Token subject is required"));
 
         filter.doFilterInternal(request, response, filterChain);
 
         assertNull(SecurityContextHolder.getContext().getAuthentication());
 
-        verify(jwtService).extractEmail("token-without-email");
-        verify(filterChain).doFilter(request, response);
+        verify(jwtService).parseToken("token-without-email");
+        verify(authenticationEntryPoint).commence(eq(request), eq(response), any(BadCredentialsException.class));
+        verifyNoInteractions(userRepository, filterChain);
     }
 
     @Test
@@ -195,7 +208,7 @@ class JwtAuthenticationFilterTest {
         SecurityContextHolder.getContext()
                 .setAuthentication(existingAuthentication);
         when(request.getCookies()).thenReturn(new Cookie[]{cookie});
-        when(jwtService.extractEmail("invalid-token")).thenThrow(cause);
+        when(jwtService.parseToken("invalid-token")).thenThrow(cause);
 
         filter.doFilterInternal(request, response, filterChain);
 
@@ -219,7 +232,7 @@ class JwtAuthenticationFilterTest {
                 new IllegalArgumentException("Token is malformed");
 
         when(request.getCookies()).thenReturn(new Cookie[]{cookie});
-        when(jwtService.extractEmail("illegal-token"))
+        when(jwtService.parseToken("illegal-token"))
                 .thenThrow(cause);
 
         filter.doFilterInternal(request, response, filterChain);
@@ -235,5 +248,24 @@ class JwtAuthenticationFilterTest {
                 )
         );
         verify(filterChain, never()).doFilter(request, response);
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {0L, 2L})
+    void shouldRejectBothOlderAndNewerVersionsAndClearExistingAuthentication(long tokenVersion) throws Exception {
+        User user = new User("user@example.com", "hash", UserStatus.ACTIVE);
+        user.incrementSessionVersion();
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie("access_token", "versioned-token")});
+        when(jwtService.parseToken("versioned-token"))
+                .thenReturn(new JwtService.TokenIdentity("user@example.com", tokenVersion));
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "existing@example.com", null, Collections.emptyList()));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(authenticationEntryPoint).commence(eq(request), eq(response), any(BadCredentialsException.class));
+        verifyNoInteractions(filterChain);
     }
 }

@@ -11,6 +11,7 @@ import io.github.raulperezmoreno71.threatintel.model.UserStatus;
 import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserService {
@@ -53,8 +54,9 @@ public class UserService {
         return userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
     }
 
-    public void changePassword(String email, ChangePasswordRequest request) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new UserNotFoundException("User not found"));
+    @Transactional
+    public User changePassword(String email, ChangePasswordRequest request) {
+        User user = userRepository.findByEmailForUpdate(email).orElseThrow(() -> new UserNotFoundException("User not found"));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new InvalidCredentialException("Invalid password");
@@ -67,7 +69,9 @@ public class UserService {
         String encodedNewPassword = passwordEncoder.encode(request.getNewPassword());
 
         user.setPasswordHash(encodedNewPassword);
+        user.incrementSessionVersion();
 
         userRepository.save(user);
+        return user;
     }
 }

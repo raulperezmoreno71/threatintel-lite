@@ -9,6 +9,7 @@ import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
 import io.github.raulperezmoreno71.threatintel.service.AnalyzeService;
 import io.github.raulperezmoreno71.threatintel.service.AnalysisRateLimitService;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
+import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,9 @@ class AnalyzeControllerTest {
 
     @MockitoBean
     private JwtService jwtService;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @MockitoBean
     private AnalysisRateLimitService analysisRateLimitService;

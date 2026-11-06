@@ -21,6 +21,9 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
+    @Column(name = "session_version", nullable = false)
+    private long sessionVersion = 0L;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserStatus status;
@@ -71,6 +74,14 @@ public class User {
 
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public long getSessionVersion() {
+        return sessionVersion;
+    }
+
+    public void incrementSessionVersion() {
+        sessionVersion++;
     }
 
     public LocalDateTime getCreatedAt() {

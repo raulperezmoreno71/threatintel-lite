@@ -176,14 +176,7 @@ public class UserController {
             attempt.succeeded();
         }
 
-        String token = jwtService.generateToken(user);
-
-        ResponseCookie cookie = ResponseCookie.from("access_token", token)
-                .httpOnly(true)
-                .secure(cookieSecure)
-                .sameSite("Lax")
-                .path("/")
-                .build();
+        ResponseCookie cookie = createAccessTokenCookie(user);
 
         LoginResponse response = new LoginResponse(
                 user.getId(),
@@ -274,12 +267,12 @@ public class UserController {
 
     @Operation(
             summary = "Change authenticated user's password",
-            description = "Changes the password of the currently authenticated user after verifying the current password."
+            description = "Changes the password after verifying the current password, revokes earlier tokens and renews the current access cookie."
     )
     @ApiResponses({
             @ApiResponse(
                     responseCode = "204",
-                    description = "Password changed successfully"
+                    description = "Password changed successfully and current access cookie renewed"
             ),
             @ApiResponse(
                     responseCode = "401",
@@ -338,8 +331,18 @@ public class UserController {
     })
     @PostMapping("/change-password")
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request, Authentication authentication) {
-        userService.changePassword(authentication.getName(), request);
+        User user = userService.changePassword(authentication.getName(), request);
+        ResponseCookie cookie = createAccessTokenCookie(user);
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, cookie.toString()).build();
+    }
+
+    private ResponseCookie createAccessTokenCookie(User user) {
+        return ResponseCookie.from("access_token", jwtService.generateToken(user))
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite("Lax")
+                .path("/")
+                .build();
     }
 }

@@ -23,9 +23,27 @@ The first consolidated version includes the complete user journey:
 4. Review the score, grade and recommendations in the web interface.
 5. Save selected results to a user-owned history.
 6. Reopen stored analyses from the private history.
-7. Change the account password and close the session.
+7. Change the account password while keeping the current browser signed in.
+8. Close the session.
 
 Authentication is handled with a signed JWT stored in an HttpOnly cookie. Protected backend resources are scoped to the authenticated user, so saved analyses cannot be retrieved or deleted through another account.
+
+New JWTs include the user's `sessionVersion`. For every protected request carrying
+an access token, the authentication filter verifies the JWT once and reads the
+current user from PostgreSQL. The user must exist, be `ACTIVE`, and have the same
+session version as the token. Invalid sessions receive the standard `401` response;
+tokens issued before the version claim was added also require a new login. Public
+authentication routes and the health endpoint remain accessible with old cookies.
+
+Deployments must already have `public.users.session_version BIGINT NOT NULL DEFAULT 0`
+before this backend is deployed. Increasing the stored version invalidates older
+tokens at their next authentication check. Password changes verify the current
+password under a per-user pessimistic write lock and save the new password hash
+and incremented session version in one transaction. After that transaction commits,
+the controller issues a fresh JWT in the existing HttpOnly access cookie: the current
+browser remains signed in and previous tokens are rejected. Failed password checks
+and persistence errors do not renew the cookie; transaction rollback preserves both
+stored values. The endpoint still returns `204 No Content` with no token in the body.
 
 ## Main features
 
@@ -143,7 +161,7 @@ The score is based only on these six headers; DNS results, HTTP response codes a
 - JWT authentication through an HttpOnly `access_token` cookie.
 - CSRF protection using the `XSRF-TOKEN` cookie and `X-XSRF-TOKEN` request header.
 - Current-user endpoint and protected application routes.
-- Password changes after verifying the current password.
+- Transactional password changes with current-password verification, previous-token revocation and renewal of the current browser's access cookie.
 - Explicit logout through cookie invalidation.
 - Complete analysis persistence in PostgreSQL.
 - Per-user listing, detail and deletion of stored reports.

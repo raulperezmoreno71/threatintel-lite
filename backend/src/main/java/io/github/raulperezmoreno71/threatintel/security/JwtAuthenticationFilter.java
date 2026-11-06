@@ -1,6 +1,8 @@
 package io.github.raulperezmoreno71.threatintel.security;
 
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
+import io.github.raulperezmoreno71.threatintel.model.UserStatus;
+import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -8,6 +10,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -21,10 +24,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+    private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService, CustomAuthenticationEntryPoint authenticationEntryPoint) {
+    public JwtAuthenticationFilter(JwtService jwtService, CustomAuthenticationEntryPoint authenticationEntryPoint, UserRepository userRepository) {
         this.jwtService = jwtService;
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -44,18 +49,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            String email = jwtService.extractEmail(token);
+            var identity = jwtService.parseToken(token);
+            var user = userRepository.findByEmail(identity.email())
+                    .orElseThrow(() -> new BadCredentialsException("Invalid session"));
 
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(email, null, Collections.emptyList());
+            if (user.getStatus() != UserStatus.ACTIVE || user.getSessionVersion() != identity.sessionVersion()) {
+                throw new BadCredentialsException("Invalid session");
+            }
+
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(identity.email(), null, Collections.emptyList());
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
-        } catch (JwtException | IllegalArgumentException exception) {
+        } catch (JwtException | IllegalArgumentException | BadCredentialsException exception) {
             SecurityContextHolder.clearContext();
 
             authenticationEntryPoint.commence(request, response, new BadCredentialsException("Invalid token", exception));
             return;
+        } catch (DataAccessException databaseFailure) {
+            SecurityContextHolder.clearContext();
+            throw databaseFailure;
         }
 
         filterChain.doFilter(request, response);

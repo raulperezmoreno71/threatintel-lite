@@ -3,6 +3,7 @@ package io.github.raulperezmoreno71.threatintel.config;
 import io.github.raulperezmoreno71.threatintel.security.CustomAuthenticationEntryPoint;
 import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
+import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -58,6 +59,9 @@ class SecurityConfigTest {
 
     @MockitoBean
     private JwtService jwtService;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @ParameterizedTest
     @ValueSource(strings = {

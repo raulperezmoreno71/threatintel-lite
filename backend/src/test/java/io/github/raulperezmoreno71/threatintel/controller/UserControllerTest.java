@@ -12,12 +12,16 @@ import io.github.raulperezmoreno71.threatintel.model.UserStatus;
 import io.github.raulperezmoreno71.threatintel.security.CustomAuthenticationEntryPoint;
 import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
+import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
+import java.util.Optional;
 import io.github.raulperezmoreno71.threatintel.service.LoginRateLimitService;
 import org.junit.jupiter.api.BeforeEach;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration;
@@ -52,11 +56,17 @@ class UserControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private UserController userController;
+
     @MockitoBean
     private UserService userService;
 
     @MockitoBean
     private JwtService jwtService;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @MockitoBean
     private LoginRateLimitService loginRateLimitService;
@@ -181,8 +191,9 @@ class UserControllerTest {
         );
         ReflectionTestUtils.setField(user, "id", 1L);
 
-        when(jwtService.extractEmail("valid-token"))
-                .thenReturn("user@example.com");
+        when(jwtService.parseToken("valid-token"))
+                .thenReturn(new JwtService.TokenIdentity("user@example.com", 0));
+        when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
         when(userService.getByEmail("user@example.com"))
                 .thenReturn(user);
 
@@ -195,13 +206,13 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.email").value("user@example.com"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
-        verify(jwtService).extractEmail("valid-token");
+        verify(jwtService).parseToken("valid-token");
         verify(userService).getByEmail("user@example.com");
     }
 
     @Test
     void shouldReturnJsonUnauthorizedWhenJwtCookieIsInvalid() throws Exception {
-        when(jwtService.extractEmail("invalid-token"))
+        when(jwtService.parseToken("invalid-token"))
                 .thenThrow(new JwtException("Invalid token"));
 
         mockMvc.perform(
@@ -215,7 +226,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message").value("Authentication is required"))
                 .andExpect(jsonPath("$.path").value("/api/auth/me"));
 
-        verify(jwtService).extractEmail("invalid-token");
+        verify(jwtService).parseToken("invalid-token");
         verifyNoInteractions(userService);
     }
 
@@ -244,14 +255,21 @@ class UserControllerTest {
                 .andExpect(cookie().sameSite("access_token", "Lax"));
     }
 
-    @Test
-    void shouldChangePasswordSuccessfully() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void shouldChangePasswordAndRenewCookieWithConfiguredSecurity(boolean secure) throws Exception {
         ChangePasswordRequest request = new ChangePasswordRequest(
                 "current-password",
                 "new-password"
         );
+        User updated = new User("user@example.com", "new-hash", UserStatus.ACTIVE);
+        updated.incrementSessionVersion();
+        when(userService.changePassword(eq("user@example.com"), any(ChangePasswordRequest.class))).thenReturn(updated);
+        when(jwtService.generateToken(updated)).thenReturn("renewed-jwt");
+        ReflectionTestUtils.setField(userController, "cookieSecure", secure);
 
-        mockMvc.perform(
+        try {
+            mockMvc.perform(
                         post("/api/auth/change-password")
                                 .with(csrfCookieAndHeader())
                                 .with(user("user@example.com"))
@@ -259,7 +277,15 @@ class UserControllerTest {
                                 .content(objectMapper.writeValueAsString(request))
                 )
                 .andExpect(status().isNoContent())
-                .andExpect(content().string(""));
+                .andExpect(content().string(""))
+                .andExpect(cookie().value("access_token", "renewed-jwt"))
+                .andExpect(cookie().httpOnly("access_token", true))
+                .andExpect(cookie().secure("access_token", secure))
+                .andExpect(cookie().path("access_token", "/"))
+                .andExpect(cookie().sameSite("access_token", "Lax"));
+        } finally {
+            ReflectionTestUtils.setField(userController, "cookieSecure", false);
+        }
 
         verify(userService).changePassword(
                 eq("user@example.com"),
@@ -268,6 +294,7 @@ class UserControllerTest {
                                 && "new-password".equals(changePasswordRequest.getNewPassword())
                 )
         );
+        verify(jwtService).generateToken(updated);
     }
 
     @Test

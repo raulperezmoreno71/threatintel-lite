@@ -178,7 +178,7 @@ class UserServiceTest {
                 "new-password"
         );
 
-        when(userRepository.findByEmail("user@example.com"))
+        when(userRepository.findByEmailForUpdate("user@example.com"))
                 .thenReturn(Optional.of(user));
         when(passwordEncoder.matches("current-password", "encoded-current-password"))
                 .thenReturn(true);
@@ -187,11 +187,13 @@ class UserServiceTest {
         when(passwordEncoder.encode("new-password"))
                 .thenReturn("encoded-new-password");
 
-        userService.changePassword("user@example.com", request);
+        User updated = userService.changePassword("user@example.com", request);
 
+        assertSame(user, updated);
         assertEquals("encoded-new-password", user.getPasswordHash());
+        assertEquals(1L, user.getSessionVersion());
 
-        verify(userRepository).findByEmail("user@example.com");
+        verify(userRepository).findByEmailForUpdate("user@example.com");
         verify(passwordEncoder).matches("current-password", "encoded-current-password");
         verify(passwordEncoder).matches("new-password", "encoded-current-password");
         verify(passwordEncoder).encode("new-password");
@@ -205,7 +207,7 @@ class UserServiceTest {
                 "new-password"
         );
 
-        when(userRepository.findByEmail("missing@example.com"))
+        when(userRepository.findByEmailForUpdate("missing@example.com"))
                 .thenReturn(Optional.empty());
 
         UserNotFoundException exception = assertThrows(
@@ -215,7 +217,7 @@ class UserServiceTest {
 
         assertEquals("User not found", exception.getMessage());
 
-        verify(userRepository).findByEmail("missing@example.com");
+        verify(userRepository).findByEmailForUpdate("missing@example.com");
         verifyNoInteractions(passwordEncoder);
         verify(userRepository, never()).save(any(User.class));
     }
@@ -232,7 +234,7 @@ class UserServiceTest {
                 "new-password"
         );
 
-        when(userRepository.findByEmail("user@example.com"))
+        when(userRepository.findByEmailForUpdate("user@example.com"))
                 .thenReturn(Optional.of(user));
         when(passwordEncoder.matches("incorrect-password", "encoded-current-password"))
                 .thenReturn(false);
@@ -244,8 +246,9 @@ class UserServiceTest {
 
         assertEquals("Invalid password", exception.getMessage());
         assertEquals("encoded-current-password", user.getPasswordHash());
+        assertEquals(0L, user.getSessionVersion());
 
-        verify(userRepository).findByEmail("user@example.com");
+        verify(userRepository).findByEmailForUpdate("user@example.com");
         verify(passwordEncoder).matches("incorrect-password", "encoded-current-password");
         verify(passwordEncoder, never()).encode(anyString());
         verify(userRepository, never()).save(any(User.class));
@@ -263,7 +266,7 @@ class UserServiceTest {
                 "current-password"
         );
 
-        when(userRepository.findByEmail("user@example.com"))
+        when(userRepository.findByEmailForUpdate("user@example.com"))
                 .thenReturn(Optional.of(user));
         when(passwordEncoder.matches("current-password", "encoded-current-password"))
                 .thenReturn(true);
@@ -278,8 +281,9 @@ class UserServiceTest {
                 exception.getMessage()
         );
         assertEquals("encoded-current-password", user.getPasswordHash());
+        assertEquals(0L, user.getSessionVersion());
 
-        verify(userRepository).findByEmail("user@example.com");
+        verify(userRepository).findByEmailForUpdate("user@example.com");
         verify(passwordEncoder, times(2))
                 .matches("current-password", "encoded-current-password");
         verify(passwordEncoder, never()).encode(anyString());
