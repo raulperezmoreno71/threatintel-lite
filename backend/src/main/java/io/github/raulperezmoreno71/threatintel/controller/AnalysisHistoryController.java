@@ -96,7 +96,7 @@ public class AnalysisHistoryController {
 
     @Operation(
             summary = "Save an analysis",
-            description = "Persists a previously calculated URL analysis for the authenticated user."
+            description = "Persists only the server-retained report identified by pendingAnalysisId for the authenticated user. Extra report fields are ignored. Known rollbacks remain retryable until expiration. Committed or uncertain outcomes retire the identifier; check history before analyzing again."
     )
     @ApiResponses({
             @ApiResponse(
@@ -105,7 +105,7 @@ public class AnalysisHistoryController {
             ),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Invalid analysis data",
+                    description = "Missing or malformed pending analysis ID",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(
@@ -123,6 +123,12 @@ public class AnalysisHistoryController {
                             )
                     )
             ),
+            @ApiResponse(responseCode = "404", description = "Pending report unavailable, expired, evicted, already saved or owned by another user",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "The pending report is already being saved",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "Server report exceeds persistence bounds",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(
                     responseCode = "500",
                     description = "Internal server error while saving the analysis",

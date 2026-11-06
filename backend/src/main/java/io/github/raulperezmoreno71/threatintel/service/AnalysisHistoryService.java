@@ -2,6 +2,12 @@ package io.github.raulperezmoreno71.threatintel.service;
 
 import io.github.raulperezmoreno71.threatintel.dto.AnalysisHistoryResponse;
 import io.github.raulperezmoreno71.threatintel.dto.SaveAnalysisRequest;
+import io.github.raulperezmoreno71.threatintel.dto.AnalysisSnapshot;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import io.github.raulperezmoreno71.threatintel.entity.*;
 import io.github.raulperezmoreno71.threatintel.exception.AnalysisNotFoundException;
 import io.github.raulperezmoreno71.threatintel.model.*;
@@ -12,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class AnalysisHistoryService {
@@ -19,9 +26,16 @@ public class AnalysisHistoryService {
     private final AnalysisRepository analysisRepository;
     private final UserRepository userRepository;
 
-    public AnalysisHistoryService(AnalysisRepository analysisRepository, UserRepository userRepository) {
+    private final PendingAnalysisStore pendingAnalysisStore;
+    private final TransactionTemplate saveTransaction;
+
+    public AnalysisHistoryService(AnalysisRepository analysisRepository, UserRepository userRepository,
+                                  PendingAnalysisStore pendingAnalysisStore, PlatformTransactionManager transactionManager) {
         this.analysisRepository = analysisRepository;
         this.userRepository = userRepository;
+        this.pendingAnalysisStore = pendingAnalysisStore;
+        this.saveTransaction = new TransactionTemplate(transactionManager);
+        this.saveTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     public List<AnalysisHistoryResponse> getAllAnalyses() {
@@ -57,9 +71,25 @@ public class AnalysisHistoryService {
     public void saveAnalysis(SaveAnalysisRequest request) {
         User user = getAuthenticatedUser();
 
-        Analysis analysis = mapToEntity(request, user);
-
-        analysisRepository.save(analysis);
+        PendingAnalysisStore.Claim claim = pendingAnalysisStore.claim(user.getId(), request.pendingAnalysisId());
+        AtomicInteger completion = new AtomicInteger(-1);
+        try {
+            AnalysisSnapshot snapshot = pendingAnalysisStore.snapshot(claim);
+            pendingAnalysisStore.validateForPersistence(snapshot);
+            saveTransaction.executeWithoutResult(status -> {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override public void afterCompletion(int result) { completion.set(result); }
+                });
+                completion.set(TransactionSynchronization.STATUS_UNKNOWN);
+                analysisRepository.save(mapToEntity(snapshot, user));
+            });
+        } finally {
+            if (completion.get() == -1 || completion.get() == TransactionSynchronization.STATUS_ROLLED_BACK) {
+                pendingAnalysisStore.release(claim);
+            } else {
+                pendingAnalysisStore.complete(claim);
+            }
+        }
     }
 
     private User getAuthenticatedUser() {
@@ -68,7 +98,7 @@ public class AnalysisHistoryService {
         return userRepository.findByEmail(email).orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
     }
 
-    private Analysis mapToEntity(SaveAnalysisRequest request, User user) {
+    private Analysis mapToEntity(AnalysisSnapshot request, User user) {
         DnsAnalysisResult dns = request.getDns();
         HttpAnalysisResult http = request.getHttp();
         SslAnalysisResult ssl = request.getSsl();
@@ -139,7 +169,7 @@ public class AnalysisHistoryService {
                 securityAssessmentEntity
         );
 
-        user.addAnalysis(analysis);
+        analysis.setUser(user);
 
         return analysis;
     }

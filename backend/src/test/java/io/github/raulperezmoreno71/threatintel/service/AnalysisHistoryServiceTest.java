@@ -2,6 +2,12 @@ package io.github.raulperezmoreno71.threatintel.service;
 
 import io.github.raulperezmoreno71.threatintel.dto.AnalysisHistoryResponse;
 import io.github.raulperezmoreno71.threatintel.dto.SaveAnalysisRequest;
+import io.github.raulperezmoreno71.threatintel.dto.AnalysisSnapshot;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
+import org.springframework.transaction.support.DefaultTransactionStatus;
+import java.util.UUID;
 import io.github.raulperezmoreno71.threatintel.entity.*;
 import io.github.raulperezmoreno71.threatintel.exception.AnalysisNotFoundException;
 import io.github.raulperezmoreno71.threatintel.model.*;
@@ -29,12 +35,20 @@ class AnalysisHistoryServiceTest {
     private AnalysisHistoryService analysisHistoryService;
     private UserRepository userRepository;
     private User user;
+    private PendingAnalysisStore pendingAnalysisStore;
 
     @BeforeEach
     void setUp() {
         analysisRepository = mock(AnalysisRepository.class);
         userRepository = mock(UserRepository.class);
         user = mock(User.class);
+        pendingAnalysisStore = mock(PendingAnalysisStore.class);
+        PlatformTransactionManager transactionManager = new AbstractPlatformTransactionManager() {
+            protected Object doGetTransaction() { return new Object(); }
+            protected void doBegin(Object transaction, TransactionDefinition definition) {}
+            protected void doCommit(DefaultTransactionStatus status) {}
+            protected void doRollback(DefaultTransactionStatus status) {}
+        };
 
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(
@@ -49,7 +63,7 @@ class AnalysisHistoryServiceTest {
 
         analysisHistoryService = new AnalysisHistoryService(
                 analysisRepository,
-                userRepository
+                userRepository, pendingAnalysisStore, transactionManager
         );
     }
 
@@ -367,7 +381,7 @@ class AnalysisHistoryServiceTest {
                 "encoded-password",
                 UserStatus.ACTIVE
         );
-        SaveAnalysisRequest request = createSaveAnalysisRequest(
+        AnalysisSnapshot request = createSaveAnalysisRequest(
                 new SslAnalysisResult(
                         "Let's Encrypt",
                         "example.com",
@@ -382,7 +396,12 @@ class AnalysisHistoryServiceTest {
         when(userRepository.findByEmail("test@example.com"))
                 .thenReturn(Optional.of(authenticatedUser));
 
-        analysisHistoryService.saveAnalysis(request);
+        UUID id = UUID.randomUUID();
+        PendingAnalysisStore.Claim claim = mock(PendingAnalysisStore.Claim.class);
+        when(pendingAnalysisStore.claim(authenticatedUser.getId(), id)).thenReturn(claim);
+        when(pendingAnalysisStore.snapshot(claim)).thenReturn(request);
+        analysisHistoryService.saveAnalysis(new SaveAnalysisRequest(id));
+        verify(pendingAnalysisStore).complete(claim);
 
         ArgumentCaptor<Analysis> analysisCaptor =
                 ArgumentCaptor.forClass(Analysis.class);
@@ -395,7 +414,6 @@ class AnalysisHistoryServiceTest {
         assertEquals("https://example.com", savedAnalysis.getUrl());
         assertEquals("example.com", savedAnalysis.getDomain());
         assertSame(authenticatedUser, savedAnalysis.getUser());
-        assertTrue(authenticatedUser.getAnalyses().contains(savedAnalysis));
 
         assertEquals(
                 List.of("93.184.216.34", "93.184.216.35"),
@@ -478,14 +496,19 @@ class AnalysisHistoryServiceTest {
                 "encoded-password",
                 UserStatus.ACTIVE
         );
-        SaveAnalysisRequest request = createSaveAnalysisRequest(null);
+        AnalysisSnapshot request = createSaveAnalysisRequest(null);
 
         request.setUrl("http://example.com");
 
         when(userRepository.findByEmail("test@example.com"))
                 .thenReturn(Optional.of(authenticatedUser));
 
-        analysisHistoryService.saveAnalysis(request);
+        UUID id = UUID.randomUUID();
+        PendingAnalysisStore.Claim claim = mock(PendingAnalysisStore.Claim.class);
+        when(pendingAnalysisStore.claim(authenticatedUser.getId(), id)).thenReturn(claim);
+        when(pendingAnalysisStore.snapshot(claim)).thenReturn(request);
+        analysisHistoryService.saveAnalysis(new SaveAnalysisRequest(id));
+        verify(pendingAnalysisStore).complete(claim);
 
         ArgumentCaptor<Analysis> analysisCaptor =
                 ArgumentCaptor.forClass(Analysis.class);
@@ -501,7 +524,6 @@ class AnalysisHistoryServiceTest {
         assertNotNull(savedAnalysis.getSecurityHeadersAnalysis());
         assertNotNull(savedAnalysis.getSecurityAssessmentAnalysis());
         assertSame(authenticatedUser, savedAnalysis.getUser());
-        assertTrue(authenticatedUser.getAnalyses().contains(savedAnalysis));
 
         verify(userRepository).findByEmail("test@example.com");
     }
@@ -525,7 +547,7 @@ class AnalysisHistoryServiceTest {
         verify(analysisRepository, never()).save(any(Analysis.class));
     }
 
-    private SaveAnalysisRequest createSaveAnalysisRequest(SslAnalysisResult ssl) {
+    private AnalysisSnapshot createSaveAnalysisRequest(SslAnalysisResult ssl) {
         DnsAnalysisResult dns = new DnsAnalysisResult(
                 List.of("93.184.216.34", "93.184.216.35")
         );
@@ -579,7 +601,7 @@ class AnalysisHistoryServiceTest {
                         0
                 );
 
-        return new SaveAnalysisRequest(
+        return new AnalysisSnapshot(
                 "URL analyzed successfully",
                 "https://example.com",
                 "example.com",

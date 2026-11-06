@@ -1,12 +1,13 @@
 package io.github.raulperezmoreno71.threatintel.controller;
 
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeRequest;
-import io.github.raulperezmoreno71.threatintel.dto.AnalyzeResponse;
+import io.github.raulperezmoreno71.threatintel.dto.PendingAnalysisResponse;
 import io.github.raulperezmoreno71.threatintel.dto.ErrorResponse;
 import io.github.raulperezmoreno71.threatintel.entity.User;
 import io.github.raulperezmoreno71.threatintel.exception.AnalysisRateLimitExceededException;
 import io.github.raulperezmoreno71.threatintel.service.AnalysisRateLimitService;
 import io.github.raulperezmoreno71.threatintel.service.AnalyzeService;
+import io.github.raulperezmoreno71.threatintel.service.PendingAnalysisStore;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,20 +34,23 @@ public class AnalyzeController {
     private final AnalyzeService analyzeService;
     private final AnalysisRateLimitService analysisRateLimitService;
     private final UserService userService;
+    private final PendingAnalysisStore pendingAnalysisStore;
 
     public AnalyzeController (
             AnalyzeService analyzeService,
             AnalysisRateLimitService analysisRateLimitService,
-            UserService userService
+            UserService userService,
+            PendingAnalysisStore pendingAnalysisStore
     ) {
         this.analyzeService = analyzeService;
         this.analysisRateLimitService = analysisRateLimitService;
         this.userService = userService;
+        this.pendingAnalysisStore = pendingAnalysisStore;
     }
 
     @Operation(
             summary =  "Analyze a URL",
-            description = "Performs DNS resolution, HTTP analysis, redirect chain inspection, SSL/TLS certificate analysis, security header assessment and overall security score calculation."
+            description = "Performs DNS resolution, HTTP analysis, redirect chain inspection, SSL/TLS certificate analysis, security header assessment and overall security score calculation. Retains the server report temporarily and returns pendingAnalysisId and expiresAt for an explicit save."
     )
     @ApiResponses({
             @ApiResponse(
@@ -55,7 +59,7 @@ public class AnalyzeController {
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(
-                                    implementation = AnalyzeResponse.class
+                                    implementation = PendingAnalysisResponse.class
                             )
                     )
             ),
@@ -80,6 +84,10 @@ public class AnalyzeController {
                             )
                     )
             ),
+            @ApiResponse(responseCode = "422", description = "Generated snapshot exceeds temporary storage byte limit",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "503", description = "Temporary analysis storage is full",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(
                     responseCode = "500",
                     description = "Internal server error during URL analysis.",
@@ -103,13 +111,13 @@ public class AnalyzeController {
             )
     })
     @PostMapping("/analyze")
-    public AnalyzeResponse analyze (@Valid @RequestBody AnalyzeRequest request, Principal principal) {
+    public PendingAnalysisResponse analyze (@Valid @RequestBody AnalyzeRequest request, Principal principal) {
         User user = userService.getByEmail(principal.getName());
 
         if (!analysisRateLimitService.tryAcquire(user.getId())) {
             throw new AnalysisRateLimitExceededException();
         }
 
-        return analyzeService.analyze(request);
+        return pendingAnalysisStore.retain(user.getId(), analyzeService.analyze(request));
     }
 }

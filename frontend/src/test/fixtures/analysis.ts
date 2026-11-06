@@ -22,6 +22,8 @@ export function createAnalysisFixture(
   overrides: AnalysisFixtureOverrides = {},
 ): AnalyzeResponse {
   const analysis: AnalyzeResponse = {
+    pendingAnalysisId: '874df9c2-17d9-49d4-b184-98b123442002',
+    expiresAt: '2026-11-06T18:15:00Z',
     message: 'URL analyzed successfully',
     url: 'http://example.com',
     domain: 'example.com',
@@ -144,9 +146,11 @@ export function createAnalysisHistoryFixture(
 ): AnalysisHistoryResponse {
   const { id = 1, createdAt = '2026-09-16T10:30:00', ...analysisOverrides } = overrides
 
+  const report = createAnalysisFixture(analysisOverrides)
   return {
-    ...createAnalysisFixture(analysisOverrides),
-    id,
-    createdAt,
+    message: report.message, url: report.url, domain: report.domain,
+    dns: report.dns, http: report.http, ssl: report.ssl,
+    securityHeaders: report.securityHeaders, securityAssessment: report.securityAssessment,
+    id, createdAt,
   }
 }

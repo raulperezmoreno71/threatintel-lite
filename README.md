@@ -219,6 +219,39 @@ REST controllers
 
 The analysis operation and persistence are intentionally separate in v1. A report is generated first and is only persisted when the user chooses **Save analysis**.
 
+The backend retains an immutable temporary copy of each generated report, owned by the authenticated user's database ID. `POST /api/analyze` returns the report plus `pendingAnalysisId` (a random UUID) and `expiresAt`. Save sends only that identifier:
+
+```http
+POST /api/analyses
+Content-Type: application/json
+Cookie: access_token=<jwt>; XSRF-TOKEN=<csrf-token>
+X-XSRF-TOKEN: <csrf-token>
+
+{"pendingAnalysisId":"874df9c2-17d9-49d4-b184-98b123442002"}
+```
+
+The backend persists its retained snapshot, including the original URL, score and headers. Extra browser-supplied report or owner fields are ignored; the old full-report-only payload is rejected with `400`. Save performs no outbound network requests. Historical responses keep their existing database IDs and report shape, without temporary identifiers.
+
+Temporary storage defaults to a **15-minute TTL**, **5 drafts per user**, **500 drafts total**, and **128 KiB of serialized data per draft** (at most about 62.5 MiB of retained report bytes plus metadata). Settings are configurable and validated at startup:
+
+| Property | Default | Meaning |
+|---|---|---|
+| `app.analysis.drafts.ttl-seconds` | `900` | Lifetime from successful retention; saves do not extend it |
+| `app.analysis.drafts.max-per-user` | `5` | Drafts retained for one user, including in-progress saves |
+| `app.analysis.drafts.max-total` | `500` | Total retained drafts, including in-progress saves |
+| `app.analysis.drafts.max-snapshot-bytes` | `131072` | Maximum serialized snapshot size |
+
+All values must be positive and per-user capacity cannot exceed total capacity. Spring environment-variable overrides are supported (for example `APP_ANALYSIS_DRAFTS_TTL_SECONDS`).
+
+- At the per-user limit, a new successful analysis replaces that user's oldest draft that is not being saved. Other users' drafts are never evicted. If all eligible slots are reserved, or global capacity is full, Analyze returns `503`; a snapshot exceeding the byte limit returns `422`. Neither failure returns a save identifier.
+- Expiration is enforced on access and cleaned on store operations and every minute. Unknown, expired, evicted, already-saved and other-owner identifiers all return the same `404`, without consuming another user's draft. The dashboard preserves the displayed report and explains that the user can check history or analyze again.
+- A save reserves only its own draft. A concurrent save of that draft returns `409`; unrelated analysis and saves can continue. A confirmed database **commit** consumes the draft. A known rollback releases the reservation for retry while its original TTL remains, without leaving a partial graph. If the transaction outcome is uncertain, the draft is retired to prevent duplicate persistence; check history before analyzing again. An admitted save may finish after TTL; its reserved slot still counts toward capacity until completion.
+- A repeated save after success returns `404` and creates no duplicate. If commit succeeds but the transaction manager reports an error afterwards, or commit completion is unknown, that identifier cannot be saved again; check history before analyzing again.
+- Discard clears the dashboard locally. The retained draft expires or is replaced by a later analysis from that user, so repeated analyze/discard use does not fill their allowance permanently. A new analysis cannot start while the current report is being saved.
+
+This store is **in memory in one application instance**. Restarting loses pending drafts; saved history remains in PostgreSQL. Multiple application instances do not share drafts and require a shared-store design before scaling this workflow. No database schema changes or additional infrastructure are required.
+
+
 One `AnalysisDeadline` is passed through URL validation, DNS resolution, HTTP redirects and TLS inspection. Each stage consumes the remaining budget instead of restarting an independent full-analysis timeout.
 
 ### Backend packages
@@ -292,7 +325,7 @@ http://localhost:8080
 | `POST` | `/api/auth/change-password` | Yes | Change the current user's password |
 | `POST` | `/api/analyze` | Yes | Analyze a URL |
 | `GET` | `/api/analyses` | Yes | List the user's saved analyses |
-| `POST` | `/api/analyses` | Yes | Save a completed analysis |
+| `POST` | `/api/analyses` | Yes | Save a retained server report by its pending identifier |
 | `GET` | `/api/analyses/{id}` | Yes | Retrieve one owned analysis |
 | `DELETE` | `/api/analyses/{id}` | Yes | Delete one owned analysis |
 | `GET` | `/api/health` | No | Return the application health response |
@@ -376,6 +409,8 @@ The response is grouped by analysis module:
 
 ```json
 {
+  "pendingAnalysisId": "874df9c2-17d9-49d4-b184-98b123442002",
+  "expiresAt": "2026-11-06T18:15:00Z",
   "message": "URL analyzed successfully",
   "url": "https://example.com",
   "domain": "example.com",
@@ -607,7 +642,7 @@ identify the field and rule without including the submitted value.
 - Login passwords and current passwords must be nonblank; the new minimum is not applied to existing credentials.
 - Analysis URLs must be nonblank and at most 2048 characters. Network destination and SSRF checks remain in `UrlValidator`.
 
-Saved reports at `POST /api/analyses` are also validated recursively before persistence:
+The server-retained report is validated recursively on Save, before any database writes. Values originate on the server but include untrusted network metadata, so the existing persistence bounds remain enforced:
 
 - DNS, HTTP, all six security-header results and the security assessment are required.
 - TLS is optional; when supplied, its issuer, subject, dates, remaining days and status are required. Negative remaining days are allowed for expired certificates.
@@ -618,7 +653,7 @@ Saved reports at `POST /api/analyses` are also validated recursively before pers
 - Security-header values are limited to 8192 characters and their recommendations to 2048; certificate recommendations retain the database limit of 255.
 - Missing numeric and boolean fields are rejected instead of being treated as zero or false. Optional HTTP metadata, absent header values and optional recommendations may remain null.
 
-These checks validate report structure and bounds, not the authenticity or cross-field consistency of client-supplied analysis results. Report saving performs no new outbound network requests.
+These checks enforce storage structure and bounds on the trusted server snapshot. A report with longer URLs or metadata can still be analyzed and viewed (within the draft byte limit), but Save returns `422` without writing it. Failed validation releases its reservation; the draft retains its original expiration. Browser report contents cannot replace or repair the snapshot. Report saving performs no new outbound network requests.
 
 ## Testing and quality checks
 
@@ -634,6 +669,7 @@ The backend automated test suite covers:
 - Shared deadlines, slow headers, cancelled TLS operations and DNS queue saturation.
 - Per-user rate limits, rolling-window expiry, rejected attempts, concurrent admission and scheduled cleanup.
 - Controller/rate-limiter integration, including `429` responses, independent user allowances and counting failed analyses.
+- Pending-report ownership, immutability, TTL/capacity/cleanup, parallel save claims, forged extra fields, complete PostgreSQL persistence, real database constraint rollback and commit-phase rollback followed by retry, plus errors reported after a real commit without duplicate persistence.
 - Weighted security-score calculation.
 - User registration, login, current-user lookup and password changes.
 - Analysis orchestration and persistence mapping.
@@ -698,8 +734,8 @@ On a push to `main`, deployment runs only after both jobs pass. It packages the 
 
 Version 1 includes public-destination validation, pinned outbound connections, shared analysis deadlines, per-user analysis rate limiting, CSRF protection and a production configuration profile. The following boundaries remain:
 
-- Analysis persistence currently accepts the completed report returned by the client.
-- API input and nested saved reports have Bean Validation constraints, but client-supplied report authenticity and cross-field consistency are not verified.
+- Saving requires a pending report identifier; only the server-retained snapshot can be persisted, and pending reports are local to one backend instance.
+- Pending reports are held in bounded, single-instance memory and expire or disappear on restart. Multi-instance deployments need a shared pending-report store. Saved report contents come exclusively from the server snapshot; cross-field semantic checks beyond the analysis pipeline and existing Bean Validation bounds are not added here.
 - Analysis and login rate-limit counters are local to each backend instance and reset on restart. Shared counters, registration throttling and IP-based throttling are not implemented.
 - A native DNS lookup can outlive the caller's deadline; resolver capacity is bounded and overload is reported explicitly.
 - Invalid or untrusted HTTPS certificates can stop the analysis during the HTTP handshake before a certificate report is produced.
@@ -713,7 +749,6 @@ These constraints are documented explicitly so that the current guarantees of th
 
 - Shared rate-limit counters for multi-instance deployments and throttling for other endpoints.
 - Further operational tuning of network limits and resolver capacity.
-- Server-authoritative analysis persistence.
 - Further report consistency checks beyond the implemented API request validation.
 - Versioned database migrations.
 - Paginated analysis history and lightweight list projections.

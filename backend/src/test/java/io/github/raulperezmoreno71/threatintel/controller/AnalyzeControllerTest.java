@@ -3,6 +3,8 @@ package io.github.raulperezmoreno71.threatintel.controller;
 import io.github.raulperezmoreno71.threatintel.config.SecurityConfig;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeRequest;
 import io.github.raulperezmoreno71.threatintel.dto.AnalyzeResponse;
+import io.github.raulperezmoreno71.threatintel.dto.PendingAnalysisResponse;
+import io.github.raulperezmoreno71.threatintel.service.PendingAnalysisStore;
 import io.github.raulperezmoreno71.threatintel.entity.User;
 import io.github.raulperezmoreno71.threatintel.security.CustomAuthenticationEntryPoint;
 import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
@@ -62,12 +64,18 @@ class AnalyzeControllerTest {
     @MockitoBean
     private UserService userService;
 
+    @MockitoBean
+    private PendingAnalysisStore pendingAnalysisStore;
+
     @BeforeEach
     void setUpAuthenticatedUser() {
         User authenticatedUser = mock(User.class);
         when(authenticatedUser.getId()).thenReturn(42L);
         when(userService.getByEmail("test@example.com")).thenReturn(authenticatedUser);
         when(analysisRateLimitService.tryAcquire(42L)).thenReturn(true);
+        when(pendingAnalysisStore.retain(eq(42L), any())).thenAnswer(invocation -> new PendingAnalysisResponse(
+                invocation.getArgument(1), java.util.UUID.fromString("874df9c2-17d9-49d4-b184-98b123442002"),
+                java.time.Instant.parse("2026-01-01T12:15:00Z")));
     }
 
     @Test
@@ -116,6 +124,8 @@ class AnalyzeControllerTest {
                                 .content(objectMapper.writeValueAsString(request))
                 )
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pendingAnalysisId").value("874df9c2-17d9-49d4-b184-98b123442002"))
+                .andExpect(jsonPath("$.expiresAt").value("2026-01-01T12:15:00Z"))
                 .andExpect(
                         jsonPath("$.message").value("URL analyzed successfully")
                 )

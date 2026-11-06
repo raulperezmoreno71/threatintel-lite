@@ -4,7 +4,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { getCurrentUser, logout } from '../api/AuthApi'
 import type { AnalyzeResponse, UserResponse } from '../types'
 import { analyzeUrl } from '../api/AnalyzeApi'
-import { saveAnalysis } from '../api/AnalysisHistoryApi'
+import { PendingAnalysisUnavailableError, saveAnalysis } from '../api/AnalysisHistoryApi'
 import AnalysisResults from '../components/AnalysisResults'
 import './DashboardPage.css'
 
@@ -17,6 +17,7 @@ function DashboardPage() {
     const [analysisError, setAnalysisError] = useState('')
     const [isSavingAnalysis, setIsSavingAnalysis] = useState(false)
     const [saveError, setSaveError] = useState('')
+    const [isAnalysisUnavailable, setIsAnalysisUnavailable] = useState(false)
     const [isAnalysisSaved, setIsAnalysisSaved] = useState(false)
     const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false)
 
@@ -69,10 +70,14 @@ function DashboardPage() {
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault()
+        if (isAnalyzing || isSavingAnalysis) {
+            return
+        }
 
         setAnalysis(null)
         setAnalysisError('')
         setSaveError('')
+        setIsAnalysisUnavailable(false)
         setIsAnalysisSaved(false)
 
         setIsAnalyzing(true)
@@ -106,12 +111,13 @@ function DashboardPage() {
     function handleDiscardAnalysis() {
         setAnalysis(null)
         setSaveError('')
+        setIsAnalysisUnavailable(false)
         setIsAnalysisSaved(false)
         setIsDiscardDialogOpen(false)
     }
 
     async function handleSaveAnalysis() {
-        if (!analysis) {
+        if (!analysis || isSavingAnalysis || isAnalysisSaved || isAnalysisUnavailable) {
             return
         }
 
@@ -119,7 +125,7 @@ function DashboardPage() {
         setSaveError('')
 
         try {
-            await saveAnalysis(analysis)
+            await saveAnalysis(analysis.pendingAnalysisId)
             setIsAnalysisSaved(true)
         } catch (error) {
             if (error instanceof Error) {
@@ -132,6 +138,7 @@ function DashboardPage() {
                     return
                 }
 
+                setIsAnalysisUnavailable(error instanceof PendingAnalysisUnavailableError)
                 setSaveError(error.message)
             }
         } finally {
@@ -244,7 +251,7 @@ function DashboardPage() {
                                 onChange={(event) => setUrl(event.target.value)}
                                 required
                             />
-                            <button type="submit" disabled={isAnalyzing}>
+                            <button type="submit" disabled={isAnalyzing || isSavingAnalysis}>
                                 {isAnalyzing && <span className="dashboard-analyze__spinner" aria-hidden="true" />}
                                 {isAnalyzing ? 'Analizando…' : 'Analizar URL'}
                                 {!isAnalyzing && <span aria-hidden="true">→</span>}
@@ -278,6 +285,7 @@ function DashboardPage() {
                         onSave={handleSaveAnalysis}
                         isSaving={isSavingAnalysis}
                         isSaved={isAnalysisSaved}
+                        isUnavailable={isAnalysisUnavailable}
                         saveError={saveError}
                     />
                 )}

@@ -3,7 +3,7 @@ import { Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { getCurrentUser, logout } from '../api/AuthApi'
 import { analyzeUrl } from '../api/AnalyzeApi'
-import { saveAnalysis } from '../api/AnalysisHistoryApi'
+import { PendingAnalysisUnavailableError, saveAnalysis } from '../api/AnalysisHistoryApi'
 import { createAnalysisFixture } from '../test/fixtures/analysis'
 import { renderWithRouter } from '../test/renderWithRouter'
 import type { AnalyzeResponse } from '../types'
@@ -20,6 +20,7 @@ vi.mock('../api/AnalyzeApi', () => ({
 
 vi.mock('../api/AnalysisHistoryApi', () => ({
   saveAnalysis: vi.fn(),
+  PendingAnalysisUnavailableError: class extends Error {},
 }))
 
 const getCurrentUserMock = vi.mocked(getCurrentUser)
@@ -179,13 +180,28 @@ describe('DashboardPage', () => {
     await user.click(screen.getByRole('button', { name: 'Guardar análisis' }))
 
     expect(saveAnalysisMock).toHaveBeenCalledOnce()
-    expect(saveAnalysisMock).toHaveBeenCalledWith(analysis)
+    expect(saveAnalysisMock).toHaveBeenCalledWith(analysis.pendingAnalysisId)
     expect(screen.getByRole('button', { name: 'Guardando…' })).toBeDisabled()
 
     resolveSave()
 
     expect(await screen.findByText('Análisis guardado correctamente.')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Análisis guardado' })).toBeDisabled()
+  })
+
+  test('prevents another analysis while saving the current result', async () => {
+    let resolveSave!: () => void
+    saveAnalysisMock.mockReturnValue(new Promise((resolve) => { resolveSave = resolve }))
+    const { user } = renderDashboardPage()
+    await waitForAuthenticatedUser()
+    await runSuccessfulAnalysis(user)
+    await user.click(screen.getByRole('button', { name: 'Guardar análisis' }))
+    expect(screen.getByRole('button', { name: 'Analizar URL' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Analizar URL' }))
+    expect(analyzeUrlMock).toHaveBeenCalledOnce()
+    resolveSave()
+    expect(await screen.findByText('Análisis guardado correctamente.')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Analizar URL' })).toBeEnabled()
   })
 
   test('shows an error when saving the analysis fails', async () => {
@@ -198,6 +214,36 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not save the analysis')
     expect(screen.getByRole('button', { name: 'Guardar análisis' })).toBeEnabled()
+  })
+
+  test('keeps the report visible after expiration and allows a new analysis', async () => {
+    saveAnalysisMock.mockRejectedValueOnce(new PendingAnalysisUnavailableError('El resultado ha caducado. Vuelve a analizar la URL.'))
+    const { user } = renderDashboardPage()
+    await waitForAuthenticatedUser()
+    await runSuccessfulAnalysis(user)
+    await user.click(screen.getByRole('button', { name: 'Guardar análisis' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('El resultado ha caducado')
+    expect(screen.getByRole('button', { name: 'Guardar análisis' })).toBeDisabled()
+    expect(screen.getByRole('heading', { name: 'Resultado del análisis' })).toBeVisible()
+    analyzeUrlMock.mockResolvedValue(createAnalysisFixture({ pendingAnalysisId: 'new-pending-id' }))
+    await user.click(screen.getByRole('button', { name: 'Analizar URL' }))
+    expect(await screen.findByRole('button', { name: 'Guardar análisis' })).toBeEnabled()
+    saveAnalysisMock.mockResolvedValueOnce(undefined)
+    await user.click(screen.getByRole('button', { name: 'Guardar análisis' }))
+    expect(saveAnalysisMock).toHaveBeenLastCalledWith('new-pending-id')
+  })
+
+  test('allows retry with the same identifier after a temporary save failure', async () => {
+    saveAnalysisMock.mockRejectedValueOnce(new Error('Temporary error')).mockResolvedValueOnce(undefined)
+    const { user } = renderDashboardPage()
+    await waitForAuthenticatedUser()
+    const analysis = await runSuccessfulAnalysis(user)
+    await user.click(screen.getByRole('button', { name: 'Guardar análisis' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Temporary error')
+    await user.click(screen.getByRole('button', { name: 'Guardar análisis' }))
+    expect(await screen.findByText('Análisis guardado correctamente.')).toBeVisible()
+    expect(saveAnalysisMock).toHaveBeenNthCalledWith(1, analysis.pendingAnalysisId)
+    expect(saveAnalysisMock).toHaveBeenNthCalledWith(2, analysis.pendingAnalysisId)
   })
 
   test('asks for confirmation before discarding an analysis', async () => {

@@ -7,6 +7,7 @@ import io.github.raulperezmoreno71.threatintel.exception.GlobalExceptionHandler;
 import io.github.raulperezmoreno71.threatintel.service.AnalysisRateLimitService;
 import io.github.raulperezmoreno71.threatintel.service.AnalyzeService;
 import io.github.raulperezmoreno71.threatintel.service.UserService;
+import io.github.raulperezmoreno71.threatintel.service.PendingAnalysisStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -52,7 +53,7 @@ class AnalyzeRateLimitIntegrationTest {
                 new AnalyzeResponse("URL analyzed successfully", "https://example.com",
                         "example.com", null, null, null, null, null));
 
-        mockMvc = standaloneSetup(new AnalyzeController(analyzeService, limiter, userService))
+        mockMvc = standaloneSetup(new AnalyzeController(analyzeService, limiter, userService, mock(PendingAnalysisStore.class)))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }

@@ -1,5 +1,5 @@
 import { apiFetch } from './ApiClient'
-import type { AnalyzeResponse, AnalysisHistoryResponse, ApiErrorResponse } from '../types'
+import type { AnalysisHistoryResponse, ApiErrorResponse } from '../types'
 
 export async function getSavedAnalyses(): Promise<AnalysisHistoryResponse[]> {
   const response = await apiFetch('/api/analyses', {
@@ -31,17 +31,22 @@ export async function getSavedAnalysis(id: number): Promise<AnalysisHistoryRespo
   return data
 }
 
-export async function saveAnalysis(analysis: AnalyzeResponse): Promise<void> {
+export class PendingAnalysisUnavailableError extends Error {}
+
+export async function saveAnalysis(pendingAnalysisId: string): Promise<void> {
   const response = await apiFetch('/api/analyses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(analysis),
+    body: JSON.stringify({ pendingAnalysisId }),
   })
 
   if (!response.ok) {
     const errorData: ApiErrorResponse = await response.json()
+    if (response.status === 404) {
+      throw new PendingAnalysisUnavailableError('Este resultado ha caducado o ya no está disponible. Revisa Mis análisis por si ya se guardó, o vuelve a analizar la URL para guardarlo.')
+    }
     throw new Error(errorData.message)
   }
 }

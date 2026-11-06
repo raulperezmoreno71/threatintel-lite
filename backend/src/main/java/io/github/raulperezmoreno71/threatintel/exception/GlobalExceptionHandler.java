@@ -15,6 +15,11 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(PendingAnalysisException.class)
+    public ResponseEntity<ErrorResponse> handlePendingAnalysis(PendingAnalysisException exception, HttpServletRequest request) {
+        return buildErrorResponse(exception.getStatus(), exception.getMessage(), request);
+    }
+
     @ExceptionHandler(LoginRateLimitExceededException.class)
     public ResponseEntity<ErrorResponse> handleLoginRateLimitExceeded(LoginRateLimitExceededException exception, HttpServletRequest request) {
         ResponseEntity<ErrorResponse> response = buildErrorResponse(

@@ -9,6 +9,7 @@ import io.github.raulperezmoreno71.threatintel.security.CustomAuthenticationEntr
 import io.github.raulperezmoreno71.threatintel.security.JwtAuthenticationFilter;
 import io.github.raulperezmoreno71.threatintel.service.AnalysisRateLimitService;
 import io.github.raulperezmoreno71.threatintel.service.AnalyzeService;
+import io.github.raulperezmoreno71.threatintel.service.PendingAnalysisStore;
 import io.github.raulperezmoreno71.threatintel.service.JwtService;
 import io.github.raulperezmoreno71.threatintel.repository.UserRepository;
 import io.github.raulperezmoreno71.threatintel.service.LoginRateLimitService;
@@ -54,6 +55,7 @@ class RequestValidationTest {
     @MockitoBean private JwtService jwtService;
     @MockitoBean private UserRepository userRepository;
     @MockitoBean private AnalyzeService analyzeService;
+    @MockitoBean private PendingAnalysisStore pendingAnalysisStore;
     @MockitoBean private AnalysisRateLimitService rateLimitService;
     @MockitoBean private LoginRateLimitService loginRateLimitService;
 
@@ -98,7 +100,7 @@ class RequestValidationTest {
                 .andExpect(content().string(not(containsString("password123"))))
                 .andExpect(content().string(not(containsString("old-password"))));
 
-        verifyNoInteractions(userService, analyzeService, rateLimitService, jwtService, loginRateLimitService);
+        verifyNoInteractions(userService, analyzeService, pendingAnalysisStore, rateLimitService, jwtService, loginRateLimitService);
     }
 
     @ParameterizedTest

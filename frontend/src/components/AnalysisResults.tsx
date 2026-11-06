@@ -1,12 +1,13 @@
-import type { AnalyzeResponse } from '../types'
+import type { AnalysisReport } from '../types'
 import './AnalysisResults.css'
 
 type AnalysisResultsProps = {
-  analysis: AnalyzeResponse
+  analysis: AnalysisReport
   onDiscard?: () => void
   onSave?: () => Promise<void>
   isSaving?: boolean
   isSaved?: boolean
+  isUnavailable?: boolean
   saveError?: string
 }
 
@@ -61,6 +62,7 @@ function AnalysisResults({
   onSave,
   isSaving = false,
   isSaved = false,
+  isUnavailable = false,
   saveError = '',
 }: AnalysisResultsProps) {
   const { dns, http, ssl, securityAssessment } = analysis
@@ -402,7 +404,7 @@ function AnalysisResults({
             className="analysis-results__save"
             type="button"
             onClick={onSave}
-            disabled={isSaving || isSaved}
+            disabled={isSaving || isSaved || isUnavailable}
             aria-busy={isSaving}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">

@@ -18,7 +18,7 @@ export type UserResponse = {
     status: string
 }
 
-export type AnalyzeResponse = {
+export type AnalysisReport = {
     message: string,
     url: string,
     domain: string,
@@ -89,7 +89,12 @@ export type RegisterResponse = {
     status: string
 }
 
-export type AnalysisHistoryResponse = AnalyzeResponse & {
+export type AnalyzeResponse = AnalysisReport & {
+    pendingAnalysisId: string
+    expiresAt: string
+}
+
+export type AnalysisHistoryResponse = AnalysisReport & {
     id: number
     createdAt: string
 }
